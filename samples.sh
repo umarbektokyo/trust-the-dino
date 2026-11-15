@@ -6,7 +6,7 @@ want() { [ $# -eq 0 ] || case " $ARGS " in *" $1 "*) return 0;; *) return 1;; es
 ARGS="$*"
 
 if [ -z "$ARGS" ] || want vault; then
-# Rebuild samples/vault: upstream main + the agent branches for REQ-V7 (and its fix) and REQ-V8.
+# Rebuild samples/vault: upstream main + the agent branches for REQ-V7 (and its fix), REQ-V8 and REQ-V9.
 [ -d samples/vault ] || git clone -q https://github.com/umarbektokyo/vault samples/vault
 cd samples/vault
 git checkout -q 18ffa2d -B main
@@ -19,7 +19,11 @@ git branch -q -D agent/req-v8-preview-size 2>/dev/null || true
 git checkout -q -b agent/req-v8-preview-size
 git -c user.name=vault-agent -c user.email=agent@example.invalid am -q --committer-date-is-author-date ../../input/v8/agent.patch
 git checkout -q main
-echo "samples/vault: main + agent/req-v7-glob + agent/req-v8-preview-size"
+git branch -q -D agent/req-v9-sort 2>/dev/null || true
+git checkout -q -b agent/req-v9-sort
+git -c user.name=vault-agent -c user.email=agent@example.invalid am -q --committer-date-is-author-date ../../input/v9/agent.patch
+git checkout -q main
+echo "samples/vault: main + agent/req-v7-glob + agent/req-v8-preview-size + agent/req-v9-sort"
 cd ../..
 fi
 

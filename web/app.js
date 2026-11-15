@@ -65,7 +65,9 @@ async function route() {
     const d = await load(r.caseId);
     if (!d) { view = { screen: "missing", ...w, caseId: r.caseId }; render(); return; }
     const unit = d.units.find((u) => u.id === r.unitId)
-      || d.units.find((u) => isOpen(r.caseId, u)) || d.units[0];
+      || d.units.find((u) => isOpen(r.caseId, u))   // what waits on a person first,
+      || d.units.find((u) => u.tests?.tests?.some((t) => t.meaning === "proves requirement"))  // else the proof
+      || d.units[0];
     if (unit.id !== r.unitId) history.replaceState(null, "", `#/c/${enc(r.caseId)}/${enc(unit.id)}`);
     const same = view?.caseId === r.caseId && view?.unit?.id === unit.id;
     view = { screen: "review", ...w, d, caseId: r.caseId, unit };

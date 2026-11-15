@@ -5,6 +5,7 @@
 Pure functions (diff, guard_changes, secret_route) take graph dicts; only build() touches git.
 """
 
+import collections
 import json
 import re
 import os
@@ -109,7 +110,7 @@ def short_name(node_id):
 
 def reasons(base, head, i):
     """Why a changed node is not the model's to decide, each with the lines that show it. In order:
-    a check that runs in fewer cases next to a secret; touching a secret directly; losing a call to an
+    a check that runs in fewer cases next to a secret; changed lines that read or write a secret; losing a call to an
     auth function; changing a function whose job is security (by name)."""
     b, h = nodes(base), nodes(head)
     out = []
@@ -117,13 +118,28 @@ def reasons(base, head, i):
     route = secret_route(head, i) if risky else []
     if risky and route:
         out.append(("check", "A check now runs in fewer cases, next to a secret.", route))
+    # a secret counts only where the change touches it: a line reading or writing a secret that was added or
+    # removed, not a function that merely contains such a line somewhere else
     secret = lambda g, n: "secret" in nodes(g).get(n, {}).get("labels", [])
-    touched = [e for g in (head, base) for e in edges_from(g, i, {"reads", "writes", "literal"}) if secret(g, e["to"])]
+    uses = lambda g: [e for e in edges_from(g, i, {"reads", "writes", "literal"}) if secret(g, e["to"])]
+    key = lambda e: (e["to"], e["kind"], e["text"].strip())
+    hu, bu = uses(head), uses(base)
+    hk, bk = {key(e) for e in hu}, {key(e) for e in bu}
+    touched = [e for e in hu if key(e) not in bk] + [e for e in bu if key(e) not in hk]
     if touched:
         out.append(("secret", "It reads or writes a secret directly.", touched[:3]))
-    calls_now = {e["to"] for e in edges_from(head, i, {"calls"})}
-    lost = [e for e in edges_from(base, i, {"calls"})
-            if SENSITIVE.search(short_name(e["to"])) and e["to"] not in calls_now]
+    # fewer calls to an auth function than before, e.g. one route of many loses its requireAuth wrapper
+    auth = lambda g: [e for e in edges_from(g, i, {"calls"}) if SENSITIVE.search(short_name(e["to"]))]
+    now = collections.Counter((e["to"], e["text"].strip()) for e in auth(head))
+    lost = []
+    for e in auth(base):  # the base lines that call it and have no match in head
+        k = (e["to"], e["text"].strip())
+        if now[k] > 0:
+            now[k] -= 1
+        else:
+            lost.append(e)
+    fewer = collections.Counter(e["to"] for e in auth(base)) - collections.Counter(e["to"] for e in auth(head))
+    lost = [e for e in lost if fewer[e["to"]] > 0]
     if lost:
         out.append(("auth-call", f"It no longer calls {short_name(lost[0]['to'])}.", lost[:3]))
     if SENSITIVE.search(short_name(i)):

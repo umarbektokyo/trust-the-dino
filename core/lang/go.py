@@ -20,6 +20,9 @@ Rules:
 - Build inputs the way the existing tests do (they are shown); never pass nil for a dependency.
 - Test the requirement, AND test every rule the old code enforced for all inputs (the guards listed),
   including inputs the new code adds (new parameters, wildcard values).
+- Helpers that set up a directory may already put files in it: assert on the entries your test
+  created (their names and relative order), not on absolute positions or counts.
+- Compare values field by field (e.g. names); never reflect.DeepEqual structs that hold a time.Time.
 - One behaviour per test. Clear t.Errorf messages that say what was expected."""
 
 GUARD = """The function below used to enforce this rule for EVERY request:

@@ -100,12 +100,16 @@ def generate(repo, base_ref, head_ref, item, base_graph, head_graph, requirement
                                                                 example_tests(head_graph, node["id"])),
                                                    L.FENCE) + _existing(existing)}]
         code, res = "", None
+        best = None  # (coverage, tests, code): a later round that breaks the build must not undo an earlier one
         for r in range(ROUNDS):
             answer, meta = llm.chat(msgs, model=llm.SMART)
             code = llm.code_block(answer)
             res = L.run(head_dir, pkg_dir, L.REQ_PREFIX, code, node, L.REQ_FILE)
             rounds.append({"round": r + 1, "meta": meta, "compiled": res["compiled"],
-                           "coverage": res["coverage"], "tests": len(res["tests"])})
+                           "coverage": res["coverage"], "tests": len(res["tests"]),
+                           **({} if res["compiled"] else {"error": (res.get("error") or "")[:400]})})
+            if res["compiled"] and (best is None or ((res["coverage"] or 0), len(res["tests"])) > best[:2]):
+                best = ((res["coverage"] or 0), len(res["tests"]), code)
             log(f"  round {r + 1}: compiled={res['compiled']} tests={len(res['tests'])} "
                 f"coverage={res['coverage']} ({meta['seconds']}s{' cached' if meta['cached'] else ''})")
             msgs += [{"role": "assistant", "content": answer}]
@@ -119,6 +123,10 @@ def generate(repo, base_ref, head_ref, item, base_graph, head_graph, requirement
                              f"These lines never ran:\n{unc}\nAdd tests that reach them. Return the whole file."})
             else:
                 break
+        if best and best[2] != code:  # the last round broke the build: go back to the best one that compiled
+            code = best[2]
+            runners.write(head_dir, pkg_dir, L.REQ_FILE, code)
+            log(f"  kept round with coverage={best[0]} tests={best[1]}")
         guard_code, guard_res = "", {"tests": {}}
         for g in [g for g in item["guards"] if g["kind"] != "widened"]:  # a safer check needs no guard test
             gm = msgs[:2] + [{"role": "user", "content": L.GUARD.format(

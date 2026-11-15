@@ -1,0 +1,28 @@
+{
+  "id": "REQ-V9",
+  "title": "Sort the file list by name, size or date",
+  "repo": "samples/vault",
+  "base": "main",
+  "head": "agent/req-v9-sort",
+  "lang": "go",
+  "agent": "vault-agent",
+  "approver": "Mikko Laine",
+  "content": "../v7/content",
+  "scenes": [
+    {
+      "name": "sort by size",
+      "unit": "frontend/src/FileBrowser.svelte:markup",
+      "steps": [
+        {
+          "click": "Size"
+        }
+      ],
+      "path": "/",
+      "viewport": [
+        760,
+        330
+      ]
+    }
+  ],
+  "project": "vault"
+}

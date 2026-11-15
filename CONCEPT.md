@@ -56,4 +56,4 @@ REQ-V8 (file size in the preview header) shows the other path: visual and logic 
 | Time to merge | commit → merge | falls |
 | Share routed | lines a human must read ÷ lines changed | falls slowly as trust is earned |
 
-Measurement (docs/MEASUREMENT.md): on 25 seeded mistakes in vault, the first rules caught 9 of 17 risky ones vs 5 by the repo's own tests; rules added after that run catch 17 of 17 with 3 of 8 false alarms, fitted to that set.
+Measurement (docs/MEASUREMENT.md): on 25 seeded mistakes in vault, the first rules caught 9 of 17 risky ones vs 5 by the repo's own tests; rules added after that run catch 17 of 17 with 2 of 8 false alarms, fitted to that set.

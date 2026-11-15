@@ -1,0 +1,109 @@
+From a205ea87fcf4a46996a56c447f7d6f99aec45d2d Mon Sep 17 00:00:00 2001
+From: vault-agent <agent@example.invalid>
+Date: Sun, 15 Nov 2026 04:25:00 +0200
+Subject: [PATCH] REQ-V9: sort the file list by name, size or date
+
+---
+ backend/main.go                 | 29 +++++++++++++++++++++++++++++
+ frontend/src/FileBrowser.svelte | 20 ++++++++++++++++----
+ 2 files changed, 45 insertions(+), 4 deletions(-)
+
+diff --git a/backend/main.go b/backend/main.go
+index 5f9bbac..b3736db 100644
+--- a/backend/main.go
++++ b/backend/main.go
+@@ -819,11 +819,40 @@ func handleBrowse(absContentRoot string, secrets *SecretsStore) http.HandlerFunc
+ 			}
+ 			return strings.ToLower(files[i].Name) < strings.ToLower(files[j].Name)
+ 		})
++		sortEntries(files, r.URL.Query().Get("sort"), r.URL.Query().Get("order") == "desc")
+ 
+ 		writeJSON(w, http.StatusOK, BrowseResponse{Path: reqPath, Entries: files})
+ 	}
+ }
+ 
++// sortEntries orders a directory listing by "name", "size" or "modified" (anything else means name).
++// Folders always come first; ties fall back to the name so the order is stable.
++func sortEntries(files []FileEntry, by string, desc bool) {
++	sort.SliceStable(files, func(i, j int) bool {
++		a, b := files[i], files[j]
++		if a.IsDir != b.IsDir {
++			return a.IsDir
++		}
++		less, same := false, false
++		switch by {
++		case "size":
++			less, same = a.Size < b.Size, a.Size == b.Size
++		case "modified":
++			less, same = a.ModTime.Before(b.ModTime), a.ModTime.Equal(b.ModTime)
++		default:
++			an, bn := strings.ToLower(a.Name), strings.ToLower(b.Name)
++			less, same = an < bn, an == bn
++		}
++		if same {
++			return strings.ToLower(a.Name) < strings.ToLower(b.Name)
++		}
++		if desc {
++			return !less
++		}
++		return less
++	})
++}
++
+ func writeJSON(w http.ResponseWriter, status int, v any) {
+ 	w.WriteHeader(status)
+ 	json.NewEncoder(w).Encode(v)
+diff --git a/frontend/src/FileBrowser.svelte b/frontend/src/FileBrowser.svelte
+index 0d4cf87..7447075 100644
+--- a/frontend/src/FileBrowser.svelte
++++ b/frontend/src/FileBrowser.svelte
+@@ -342,13 +342,22 @@
+     }
+   }
+ 
++  let sortBy = $state('name');
++  let sortDesc = $state(false);
++
++  function sortOn(column) {
++    if (sortBy === column) sortDesc = !sortDesc;
++    else { sortBy = column; sortDesc = false; }
++    browse(currentPath, false);
++  }
++
+   async function browse(path, pushHistory = true) {
+     loading = true;
+     error = null;
+     selectedIndex = -1;
+     filterText = '';
+     try {
+-      const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);
++      const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}&sort=${sortBy}&order=${sortDesc ? 'desc' : 'asc'}`);
+       if (!res.ok) throw new Error('Failed to load directory');
+       const data = await res.json();
+       currentPath = data.path;
+@@ -563,9 +572,9 @@
+       {:else if viewMode === 'list'}
+         <div class="list-header">
+           <div class="lh-icon"></div>
+-          <div class="lh-name">Name</div>
+-          <div class="lh-size">Size</div>
+-          <div class="lh-date">Date Modified</div>
++          <button class="lh-name lh-sort" class:active={sortBy === 'name'} onclick={() => sortOn('name')}>Name{#if sortBy === 'name'}<span class="lh-arrow">{sortDesc ? '▼' : '▲'}</span>{/if}</button>
++          <button class="lh-size lh-sort" class:active={sortBy === 'size'} onclick={() => sortOn('size')}>Size{#if sortBy === 'size'}<span class="lh-arrow">{sortDesc ? '▼' : '▲'}</span>{/if}</button>
++          <button class="lh-date lh-sort" class:active={sortBy === 'modified'} onclick={() => sortOn('modified')}>Date Modified{#if sortBy === 'modified'}<span class="lh-arrow">{sortDesc ? '▼' : '▲'}</span>{/if}</button>
+           <div class="lh-act"></div>
+         </div>
+         <div class="list-body">
+@@ -1249,6 +1258,9 @@
+     flex-shrink: 0;
+   }
+   .lh-size { text-align: right; padding-right: 8px; }
++  .lh-sort { all: unset; cursor: pointer; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; }
++  .lh-sort:hover, .lh-sort.active { color: #ddd; }
++  .lh-arrow { margin-left: 4px; font-size: 8px; }
+ 
+   /* List body */
+   .list-body {
+-- 
+2.54.0 (Apple Git-157)
+

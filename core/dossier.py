@@ -116,6 +116,16 @@ def explain(unit, requirement):
     return text.strip().strip('"')
 
 
+def contains(repo, ref, case_id):
+    """Does ref include the head commit of case_id's review? (Unknown cases count as included.)"""
+    try:
+        h = json.load(open(os.path.join(ROOT, "dossier", f"{case_id}.json")))["commit"]["hash"]
+    except (OSError, KeyError, ValueError):
+        return True
+    return subprocess.run(["git", "-C", os.path.join(ROOT, repo), "merge-base", "--is-ancestor", h, ref],
+                          capture_output=True).returncode == 0
+
+
 MAX_TESTED = 6  # functions per commit that get generated tests; bounds the time of one review
 
 
@@ -124,7 +134,8 @@ def tests_for(repo, case, case_id, item, unit, base, head, req, suite, log):
     nid = unit["id"]
     log(f"tests for {nid}")
     near = {nid} | {e["from"] for e in unit["in"]}  # its own saved tests and its callers'
-    saved = store.relevant(suite, near, case_id)
+    # a saved test applies only to commits that contain the code it was written for
+    saved = [e for e in store.relevant(suite, near, case_id) if contains(repo, case["head"], e["written_for"])]
     kept, broken = testgen.run_saved(repo, case["base"], case["head"], saved, base, head, case["lang"], log)
     for e, why in broken:
         store.drop(suite, e, why, case_id)

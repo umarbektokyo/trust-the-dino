@@ -1,0 +1,2517 @@
+{
+ "case": {
+  "id": "REQ-V9",
+  "title": "Sort the file list by name, size or date",
+  "repo": "samples/vault",
+  "base": "main",
+  "head": "agent/req-v9-sort",
+  "lang": "go",
+  "agent": "vault-agent",
+  "approver": "Mikko Laine",
+  "content": "../v7/content",
+  "scenes": [
+   {
+    "name": "sort by size",
+    "unit": "frontend/src/FileBrowser.svelte:markup",
+    "steps": [
+     {
+      "click": "Size"
+     }
+    ],
+    "path": "/",
+    "viewport": [
+     760,
+     330
+    ]
+   }
+  ],
+  "project": "vault"
+ },
+ "requirement": "# REQ-V9: sort the file list\n\nOwner of the request: Team Files (frontend). Repo: vault (Go backend, Svelte frontend).\n\n`GET /api/browse` accepts optional `sort` (`name`, `size` or `modified`; anything else means name) and\n`order` (`asc` or `desc`, default `asc`) parameters. Folders always come first; entries that tie are\nordered by name, case-insensitive.\n\nIn the list view, clicking the Name, Size or Date Modified header sorts by that column; clicking the\nsame header again reverses the order. The active column shows \u25b2 or \u25bc.\n\nAcceptance: `?sort=size&order=desc` lists the largest file first, after the folders. Nothing else\nabout browsing changes: dotfiles stay hidden, paths outside the content root are refused.\n",
+ "graph": {
+  "nodes": 93,
+  "edges": 357
+ },
+ "units": [
+  {
+   "id": "backend/main.go:handleBrowse",
+   "name": "handleBrowse",
+   "file": "backend/main.go",
+   "kind": "func",
+   "layer": "data",
+   "status": "changed",
+   "signature": "func handleBrowse(absContentRoot string, secrets *SecretsStore) http.HandlerFunc",
+   "lines": [
+    {
+     "op": " ",
+     "n": 758,
+     "text": "func handleBrowse(absContentRoot string, secrets *SecretsStore) http.HandlerFunc {"
+    },
+    {
+     "op": " ",
+     "n": 759,
+     "text": "\treturn func(w http.ResponseWriter, r *http.Request) {"
+    },
+    {
+     "op": " ",
+     "n": 760,
+     "text": "\t\tw.Header().Set(\"Content-Type\", \"application/json\")"
+    },
+    {
+     "op": " ",
+     "n": 761,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 762,
+     "text": "\t\treqPath := r.URL.Query().Get(\"path\")"
+    },
+    {
+     "op": " ",
+     "n": 763,
+     "text": "\t\tif reqPath == \"\" {"
+    },
+    {
+     "op": " ",
+     "n": 764,
+     "text": "\t\t\treqPath = \"/\""
+    },
+    {
+     "op": " ",
+     "n": 765,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 766,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 767,
+     "text": "\t\treqPath = filepath.Clean(\"/\" + reqPath)"
+    },
+    {
+     "op": " ",
+     "n": 768,
+     "text": "\t\tfullPath := filepath.Join(absContentRoot, reqPath)"
+    },
+    {
+     "op": " ",
+     "n": 769,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 770,
+     "text": "\t\tabsPath, err := filepath.Abs(fullPath)"
+    },
+    {
+     "op": " ",
+     "n": 771,
+     "text": "\t\tif err != nil || !strings.HasPrefix(absPath, absContentRoot) {"
+    },
+    {
+     "op": " ",
+     "n": 772,
+     "text": "\t\t\twriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"invalid path\"})"
+    },
+    {
+     "op": " ",
+     "n": 773,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 774,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 775,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 776,
+     "text": "\t\tinfo, err := os.Stat(absPath)"
+    },
+    {
+     "op": " ",
+     "n": 777,
+     "text": "\t\tif err != nil {"
+    },
+    {
+     "op": " ",
+     "n": 778,
+     "text": "\t\t\twriteJSON(w, http.StatusNotFound, ErrorResponse{Error: \"path not found\"})"
+    },
+    {
+     "op": " ",
+     "n": 779,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 780,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 781,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 782,
+     "text": "\t\tif !info.IsDir() {"
+    },
+    {
+     "op": " ",
+     "n": 783,
+     "text": "\t\t\twriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"not a directory\"})"
+    },
+    {
+     "op": " ",
+     "n": 784,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 785,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 786,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 787,
+     "text": "\t\tentries, err := os.ReadDir(absPath)"
+    },
+    {
+     "op": " ",
+     "n": 788,
+     "text": "\t\tif err != nil {"
+    },
+    {
+     "op": " ",
+     "n": 789,
+     "text": "\t\t\twriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: \"cannot read directory\"})"
+    },
+    {
+     "op": " ",
+     "n": 790,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 791,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 792,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 793,
+     "text": "\t\tfiles := make([]FileEntry, 0, len(entries))"
+    },
+    {
+     "op": " ",
+     "n": 794,
+     "text": "\t\tfor _, e := range entries {"
+    },
+    {
+     "op": " ",
+     "n": 795,
+     "text": "\t\t\tif strings.HasPrefix(e.Name(), \".\") {"
+    },
+    {
+     "op": " ",
+     "n": 796,
+     "text": "\t\t\t\tcontinue"
+    },
+    {
+     "op": " ",
+     "n": 797,
+     "text": "\t\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 798,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 799,
+     "text": "\t\t\tinfo, err := e.Info()"
+    },
+    {
+     "op": " ",
+     "n": 800,
+     "text": "\t\t\tif err != nil {"
+    },
+    {
+     "op": " ",
+     "n": 801,
+     "text": "\t\t\t\tcontinue"
+    },
+    {
+     "op": " ",
+     "n": 802,
+     "text": "\t\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 803,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 804,
+     "text": "\t\t\tentryPath := filepath.Join(reqPath, e.Name())"
+    },
+    {
+     "op": " ",
+     "n": 805,
+     "text": "\t\t\tfiles = append(files, FileEntry{"
+    },
+    {
+     "op": " ",
+     "n": 806,
+     "text": "\t\t\t\tName:      e.Name(),"
+    },
+    {
+     "op": " ",
+     "n": 807,
+     "text": "\t\t\t\tPath:      entryPath,"
+    },
+    {
+     "op": " ",
+     "n": 808,
+     "text": "\t\t\t\tIsDir:     e.IsDir(),"
+    },
+    {
+     "op": " ",
+     "n": 809,
+     "text": "\t\t\t\tSize:      fileSize(info),"
+    },
+    {
+     "op": " ",
+     "n": 810,
+     "text": "\t\t\t\tModTime:   info.ModTime(),"
+    },
+    {
+     "op": " ",
+     "n": 811,
+     "text": "\t\t\t\tExt:       strings.ToLower(filepath.Ext(e.Name())),"
+    },
+    {
+     "op": " ",
+     "n": 812,
+     "text": "\t\t\t\tHasSecret: secrets.HasSecret(entryPath),"
+    },
+    {
+     "op": " ",
+     "n": 813,
+     "text": "\t\t\t})"
+    },
+    {
+     "op": " ",
+     "n": 814,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 815,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 816,
+     "text": "\t\tsort.Slice(files, func(i, j int) bool {"
+    },
+    {
+     "op": " ",
+     "n": 817,
+     "text": "\t\t\tif files[i].IsDir != files[j].IsDir {"
+    },
+    {
+     "op": " ",
+     "n": 818,
+     "text": "\t\t\t\treturn files[i].IsDir"
+    },
+    {
+     "op": " ",
+     "n": 819,
+     "text": "\t\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 820,
+     "text": "\t\t\treturn strings.ToLower(files[i].Name) < strings.ToLower(files[j].Name)"
+    },
+    {
+     "op": " ",
+     "n": 821,
+     "text": "\t\t})"
+    },
+    {
+     "op": "+",
+     "n": 822,
+     "text": "\t\tsortEntries(files, r.URL.Query().Get(\"sort\"), r.URL.Query().Get(\"order\") == \"desc\")"
+    },
+    {
+     "op": " ",
+     "n": 823,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 824,
+     "text": "\t\twriteJSON(w, http.StatusOK, BrowseResponse{Path: reqPath, Entries: files})"
+    },
+    {
+     "op": " ",
+     "n": 825,
+     "text": "\t}"
+    },
+    {
+     "op": " ",
+     "n": 826,
+     "text": "}"
+    }
+   ],
+   "in": [
+    {
+     "from": "backend/main.go:newMux",
+     "to": "backend/main.go:handleBrowse",
+     "kind": "calls",
+     "line": 221,
+     "text": "mux.HandleFunc(\"/api/browse\", handleBrowse(absContentRoot, secrets))"
+    }
+   ],
+   "out": [
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 772,
+     "text": "writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"invalid path\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 778,
+     "text": "writeJSON(w, http.StatusNotFound, ErrorResponse{Error: \"path not found\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 783,
+     "text": "writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"not a directory\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 789,
+     "text": "writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: \"cannot read directory\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:fileSize",
+     "kind": "calls",
+     "line": 809,
+     "text": "Size:      fileSize(info),"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:SecretsStore.HasSecret",
+     "kind": "calls",
+     "line": 812,
+     "text": "HasSecret: secrets.HasSecret(entryPath),"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:sortEntries",
+     "kind": "calls",
+     "line": 822,
+     "text": "sortEntries(files, r.URL.Query().Get(\"sort\"), r.URL.Query().Get(\"order\") == \"desc\")"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 824,
+     "text": "writeJSON(w, http.StatusOK, BrowseResponse{Path: reqPath, Entries: files})"
+    }
+   ],
+   "consumers": [
+    {
+     "file": "frontend/src/FileBrowser.svelte",
+     "line": 360,
+     "text": "const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}&sort=${sortBy}&order=${sortDesc ? 'desc' : 'asc'}`);"
+    }
+   ],
+   "route": "/api/browse",
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "tests": {
+    "node": "backend/main.go:handleBrowse",
+    "code": "package main\n\nimport (\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"strings\"\n\t\"testing\"\n)\n\nfunc trustCreateFile(t *testing.T, dir, name string) {\n\tt.Helper()\n\tif err := os.WriteFile(filepath.Join(dir, name), []byte(\"content\"), 0644); err != nil {\n\t\tt.Fatalf(\"failed to create file %s: %v\", name, err)\n\t}\n}\n\nfunc trustCreateDir(t *testing.T, dir, name string) {\n\tt.Helper()\n\tif err := os.MkdirAll(filepath.Join(dir, name), 0755); err != nil {\n\t\tt.Fatalf(\"failed to create dir %s: %v\", name, err)\n\t}\n}\n\nfunc trustBrowseRequest(t *testing.T, mux *http.ServeMux, path, sort, order string) *httptest.ResponseRecorder {\n\tt.Helper()\n\turl := \"/api/browse?path=\" + path\n\tif sort != \"\" {\n\t\turl += \"&sort=\" + sort\n\t}\n\tif order != \"\" {\n\t\turl += \"&order=\" + order\n\t}\n\treq := httptest.NewRequest(http.MethodGet, url, nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\treturn rr\n}\n\nfunc trustEntryNames(resp BrowseResponse) []string {\n\tnames := make([]string, 0, len(resp.Entries))\n\tfor _, e := range resp.Entries {\n\t\tnames = append(names, e.Name)\n\t}\n\treturn names\n}\n\nfunc TestTrust_SortBySizeDescLargestFileFirstAfterFolders(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"small.txt\")\n\ttrustCreateFile(t, root, \"large.txt\")\n\ttrustCreateDir(t, root, \"afolder\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"size\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif !resp.Entries[0].IsDir {\n\t\tt.Errorf(\"expected folder first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"large.txt\" {\n\t\tt.Errorf(\"expected largest file first after folders, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_SortByNameAsc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"banana.txt\")\n\ttrustCreateFile(t, root, \"apple.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt first, got %s\", names[0])\n\t}\n\tif names[1] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt second, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_SortByNameDesc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"apple.txt\")\n\ttrustCreateFile(t, root, \"banana.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt first, got %s\", names[0])\n\t}\n\tif names[1] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt second, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_SortByModifiedAsc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"old.txt\")\n\ttrustCreateFile(t, root, \"new.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"modified\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif resp.Entries[0].Name != \"old.txt\" {\n\t\tt.Errorf(\"expected oldest file first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"new.txt\" {\n\t\tt.Errorf(\"expected newest file second, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_SortByModifiedDesc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"old.txt\")\n\ttrustCreateFile(t, root, \"new.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"modified\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif resp.Entries[0].Name != \"new.txt\" {\n\t\tt.Errorf(\"expected newest file first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"old.txt\" {\n\t\tt.Errorf(\"expected oldest file second, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_InvalidSortDefaultsToName(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"apple.txt\")\n\ttrustCreateFile(t, root, \"banana.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"bogus\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt first with invalid sort, got %s\", names[0])\n\t}\n\tif names[1] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt second with invalid sort, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_DefaultOrderIsAsc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"apple.txt\")\n\ttrustCreateFile(t, root, \"banana.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt first with default order, got %s\", names[0])\n\t}\n\tif names[1] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt second with default order, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_FoldersAlwaysFirstRegardlessOfSort(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"zfile.txt\")\n\ttrustCreateDir(t, root, \"afolder\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"size\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif !resp.Entries[0].IsDir || resp.Entries[0].Name != \"afolder\" {\n\t\tt.Errorf(\"expected folder afolder first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"zfile.txt\" {\n\t\tt.Errorf(\"expected file zfile.txt second, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_TieBreaksByNameCaseInsensitive(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"Alpha.txt\")\n\ttrustCreateFile(t, root, \"beta.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"size\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"Alpha.txt\" {\n\t\tt.Errorf(\"expected Alpha.txt first on case-insensitive name tiebreak, got %s\", names[0])\n\t}\n\tif names[1] != \"beta.txt\" {\n\t\tt.Errorf(\"expected beta.txt second on case-insensitive name tiebreak, got %s\", names[1])\n\t}\n}\n\nfunc TestTrust_DotfilesStayHiddenWhenSorted(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden.txt\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tfor _, n := range names {\n\t\tif strings.HasPrefix(n, \".\") {\n\t\t\tt.Errorf(\"dotfile %s should be hidden\", n)\n\t\t}\n\t}\n\tif len(names) != 1 || names[0] != \"visible.txt\" {\n\t\tt.Errorf(\"expected only visible.txt, got %v\", names)\n\t}\n}\n\nfunc TestTrust_PathOutsideContentRootRefusedWhenSorted(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/etc\", \"name\", \"asc\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status 400 for path outside content root, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_EmptyPathDefaultsToRoot(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"visible.txt\")\n\n\tmux := newMux(testConfig(root))\n\treq := httptest.NewRequest(http.MethodGet, \"/api/browse\", nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200 for empty path, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\tif resp.Path != \"/\" {\n\t\tt.Errorf(\"expected path '/', got %q\", resp.Path)\n\t}\n\tnames := trustEntryNames(resp)\n\tif len(names) != 1 || names[0] != \"visible.txt\" {\n\t\tt.Errorf(\"expected only visible.txt, got %v\", names)\n\t}\n}\n\nfunc TestTrust_PathIsNotADirectory(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"afile.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"afile.txt\", \"name\", \"asc\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status 400 for non-directory path, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"not a directory\" {\n\t\tt.Errorf(\"expected error 'not a directory', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_UnreadableDirectoryReturns500(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateDir(t, root, \"noperm\")\n\tif err := os.Chmod(filepath.Join(root, \"noperm\"), 0000); err != nil {\n\t\tt.Fatalf(\"failed to chmod directory: %v\", err)\n\t}\n\tdefer os.Chmod(filepath.Join(root, \"noperm\"), 0755)\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"noperm\", \"name\", \"asc\")\n\tif rr.Code != http.StatusInternalServerError {\n\t\tt.Errorf(\"expected status 500 for unreadable directory, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"cannot read directory\" {\n\t\tt.Errorf(\"expected error 'cannot read directory', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_SkipEntryWhenInfoFails(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"normal.txt\")\n\ttrustCreateDir(t, root, \"noperm\")\n\tif err := os.Chmod(filepath.Join(root, \"noperm\"), 0000); err != nil {\n\t\tt.Fatalf(\"failed to chmod directory: %v\", err)\n\t}\n\tdefer os.Chmod(filepath.Join(root, \"noperm\"), 0755)\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) != 1 || names[0] != \"normal.txt\" {\n\t\tt.Errorf(\"expected only normal.txt, got %v\", names)\n\t}\n}\n\nfunc TestTrust_PathTraversalRefused(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"../\", \"name\", \"asc\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status 400 for path traversal, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}",
+    "guard_code": "",
+    "rounds": [
+     {
+      "round": 1,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 16.6,
+       "tokens": 4374,
+       "cached": false
+      },
+      "compiled": true,
+      "coverage": 78.4,
+      "tests": 11
+     },
+     {
+      "round": 2,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 16.9,
+       "tokens": 7691,
+       "cached": false
+      },
+      "compiled": true,
+      "coverage": 91.9,
+      "tests": 15
+     },
+     {
+      "round": 3,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 19.9,
+       "tokens": 11049,
+       "cached": false
+      },
+      "compiled": true,
+      "coverage": 91.9,
+      "tests": 16
+     }
+    ],
+    "coverage": 91.9,
+    "uncovered": [
+     772,
+     773,
+     774,
+     801
+    ],
+    "base_compiled": true,
+    "tests": [
+     {
+      "name": "TestTrust_DefaultOrderIsAsc",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected apple.txt first with default order, got subdir",
+       "expected banana.txt second with default order, got alpha.txt"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_DefaultOrderIsAsc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"apple.txt\")\n\ttrustCreateFile(t, root, \"banana.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt first with default order, got %s\", names[0])\n\t}\n\tif names[1] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt second with default order, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_DotfilesStayHiddenWhenSorted",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected only visible.txt, got [subdir alpha.txt beta.png visible.txt]"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_DotfilesStayHiddenWhenSorted(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden.txt\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tfor _, n := range names {\n\t\tif strings.HasPrefix(n, \".\") {\n\t\t\tt.Errorf(\"dotfile %s should be hidden\", n)\n\t\t}\n\t}\n\tif len(names) != 1 || names[0] != \"visible.txt\" {\n\t\tt.Errorf(\"expected only visible.txt, got %v\", names)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_EmptyPathDefaultsToRoot",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected only visible.txt, got [subdir alpha.txt beta.png visible.txt]"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       764,
+       765,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_EmptyPathDefaultsToRoot(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"visible.txt\")\n\n\tmux := newMux(testConfig(root))\n\treq := httptest.NewRequest(http.MethodGet, \"/api/browse\", nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200 for empty path, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\tif resp.Path != \"/\" {\n\t\tt.Errorf(\"expected path '/', got %q\", resp.Path)\n\t}\n\tnames := trustEntryNames(resp)\n\tif len(names) != 1 || names[0] != \"visible.txt\" {\n\t\tt.Errorf(\"expected only visible.txt, got %v\", names)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_FoldersAlwaysFirstRegardlessOfSort",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected file zfile.txt second, got subdir"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_FoldersAlwaysFirstRegardlessOfSort(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"zfile.txt\")\n\ttrustCreateDir(t, root, \"afolder\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"size\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif !resp.Entries[0].IsDir || resp.Entries[0].Name != \"afolder\" {\n\t\tt.Errorf(\"expected folder afolder first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"zfile.txt\" {\n\t\tt.Errorf(\"expected file zfile.txt second, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_InvalidSortDefaultsToName",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected apple.txt first with invalid sort, got subdir",
+       "expected banana.txt second with invalid sort, got alpha.txt"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_InvalidSortDefaultsToName(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"apple.txt\")\n\ttrustCreateFile(t, root, \"banana.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"bogus\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt first with invalid sort, got %s\", names[0])\n\t}\n\tif names[1] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt second with invalid sort, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_PathIsNotADirectory",
+      "from": "requirement",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       783,
+       784,
+       785
+      ],
+      "source": "func TestTrust_PathIsNotADirectory(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"afile.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"afile.txt\", \"name\", \"asc\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status 400 for non-directory path, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"not a directory\" {\n\t\tt.Errorf(\"expected error 'not a directory', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_PathOutsideContentRootRefusedWhenSorted",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected status 400 for path outside content root, got 404",
+       "expected error 'invalid path', got \"path not found\""
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       778,
+       779,
+       780
+      ],
+      "source": "func TestTrust_PathOutsideContentRootRefusedWhenSorted(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/etc\", \"name\", \"asc\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status 400 for path outside content root, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_PathTraversalRefused",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected status 400 for path traversal, got 200",
+       "expected error 'invalid path', got \"\""
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_PathTraversalRefused(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"../\", \"name\", \"asc\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status 400 for path traversal, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SkipEntryWhenInfoFails",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected only normal.txt, got [noperm subdir alpha.txt beta.png normal.txt]"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_SkipEntryWhenInfoFails(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"normal.txt\")\n\ttrustCreateDir(t, root, \"noperm\")\n\tif err := os.Chmod(filepath.Join(root, \"noperm\"), 0000); err != nil {\n\t\tt.Fatalf(\"failed to chmod directory: %v\", err)\n\t}\n\tdefer os.Chmod(filepath.Join(root, \"noperm\"), 0755)\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) != 1 || names[0] != \"normal.txt\" {\n\t\tt.Errorf(\"expected only normal.txt, got %v\", names)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByModifiedAsc",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected oldest file first, got subdir",
+       "expected newest file second, got alpha.txt"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_SortByModifiedAsc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"old.txt\")\n\ttrustCreateFile(t, root, \"new.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"modified\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif resp.Entries[0].Name != \"old.txt\" {\n\t\tt.Errorf(\"expected oldest file first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"new.txt\" {\n\t\tt.Errorf(\"expected newest file second, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByModifiedDesc",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected newest file first, got subdir",
+       "expected oldest file second, got new.txt"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_SortByModifiedDesc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"old.txt\")\n\ttrustCreateFile(t, root, \"new.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"modified\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif resp.Entries[0].Name != \"new.txt\" {\n\t\tt.Errorf(\"expected newest file first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"old.txt\" {\n\t\tt.Errorf(\"expected oldest file second, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByNameAsc",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected apple.txt first, got subdir",
+       "expected banana.txt second, got alpha.txt"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_SortByNameAsc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"banana.txt\")\n\ttrustCreateFile(t, root, \"apple.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt first, got %s\", names[0])\n\t}\n\tif names[1] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt second, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByNameDesc",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected banana.txt first, got subdir",
+       "expected apple.txt second, got beta.png"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_SortByNameDesc(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"apple.txt\")\n\ttrustCreateFile(t, root, \"banana.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"name\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"banana.txt\" {\n\t\tt.Errorf(\"expected banana.txt first, got %s\", names[0])\n\t}\n\tif names[1] != \"apple.txt\" {\n\t\tt.Errorf(\"expected apple.txt second, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortBySizeDescLargestFileFirstAfterFolders",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected largest file first after folders, got subdir"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_SortBySizeDescLargestFileFirstAfterFolders(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"small.txt\")\n\ttrustCreateFile(t, root, \"large.txt\")\n\ttrustCreateDir(t, root, \"afolder\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"size\", \"desc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif !resp.Entries[0].IsDir {\n\t\tt.Errorf(\"expected folder first, got %s\", names[0])\n\t}\n\tif resp.Entries[1].Name != \"large.txt\" {\n\t\tt.Errorf(\"expected largest file first after folders, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_TieBreaksByNameCaseInsensitive",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected Alpha.txt first on case-insensitive name tiebreak, got subdir",
+       "expected beta.txt second on case-insensitive name tiebreak, got beta.png"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       799,
+       800,
+       804,
+       805,
+       806,
+       807,
+       808,
+       809,
+       810,
+       811,
+       812,
+       813,
+       816,
+       817,
+       818,
+       819,
+       820,
+       822,
+       823,
+       824
+      ],
+      "source": "func TestTrust_TieBreaksByNameCaseInsensitive(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"Alpha.txt\")\n\ttrustCreateFile(t, root, \"beta.txt\")\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"/\", \"size\", \"asc\")\n\tresp := decodeBrowse(t, rr)\n\n\tnames := trustEntryNames(resp)\n\tif len(names) < 2 {\n\t\tt.Fatalf(\"expected at least two entries, got %v\", names)\n\t}\n\tif names[0] != \"Alpha.txt\" {\n\t\tt.Errorf(\"expected Alpha.txt first on case-insensitive name tiebreak, got %s\", names[0])\n\t}\n\tif names[1] != \"beta.txt\" {\n\t\tt.Errorf(\"expected beta.txt second on case-insensitive name tiebreak, got %s\", names[1])\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_UnreadableDirectoryReturns500",
+      "from": "requirement",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       789,
+       790,
+       791
+      ],
+      "source": "func TestTrust_UnreadableDirectoryReturns500(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateDir(t, root, \"noperm\")\n\tif err := os.Chmod(filepath.Join(root, \"noperm\"), 0000); err != nil {\n\t\tt.Fatalf(\"failed to chmod directory: %v\", err)\n\t}\n\tdefer os.Chmod(filepath.Join(root, \"noperm\"), 0755)\n\n\tmux := newMux(testConfig(root))\n\trr := trustBrowseRequest(t, mux, \"noperm\", \"name\", \"asc\")\n\tif rr.Code != http.StatusInternalServerError {\n\t\tt.Errorf(\"expected status 500 for unreadable directory, got %d\", rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"cannot read directory\" {\n\t\tt.Errorf(\"expected error 'cannot read directory', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     }
+    ],
+    "duplicates": [],
+    "dropped": []
+   },
+   "explain": "The backend sorts file list entries by name, size, or modified date based on query parameters."
+  },
+  {
+   "id": "frontend/src/FileBrowser.svelte:browse",
+   "name": "browse",
+   "file": "frontend/src/FileBrowser.svelte",
+   "kind": "func",
+   "layer": "data",
+   "status": "changed",
+   "signature": "",
+   "lines": [
+    {
+     "op": " ",
+     "n": 354,
+     "text": "  async function browse(path, pushHistory = true) {"
+    },
+    {
+     "op": " ",
+     "n": 355,
+     "text": "    loading = true;"
+    },
+    {
+     "op": " ",
+     "n": 356,
+     "text": "    error = null;"
+    },
+    {
+     "op": " ",
+     "n": 357,
+     "text": "    selectedIndex = -1;"
+    },
+    {
+     "op": " ",
+     "n": 358,
+     "text": "    filterText = '';"
+    },
+    {
+     "op": " ",
+     "n": 359,
+     "text": "    try {"
+    },
+    {
+     "op": "-",
+     "n": 351,
+     "text": "      const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);"
+    },
+    {
+     "op": "+",
+     "n": 360,
+     "text": "      const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}&sort=${sortBy}&order=${sortDesc ? 'desc' : 'asc'}`);"
+    },
+    {
+     "op": " ",
+     "n": 361,
+     "text": "      if (!res.ok) throw new Error('Failed to load directory');"
+    },
+    {
+     "op": " ",
+     "n": 362,
+     "text": "      const data = await res.json();"
+    },
+    {
+     "op": " ",
+     "n": 363,
+     "text": "      currentPath = data.path;"
+    },
+    {
+     "op": " ",
+     "n": 364,
+     "text": "      entries = data.entries;"
+    },
+    {
+     "op": " ",
+     "n": 365,
+     "text": "      if (pushHistory) {"
+    },
+    {
+     "op": " ",
+     "n": 366,
+     "text": "        history = [...history.slice(0, historyIndex + 1), path];"
+    },
+    {
+     "op": " ",
+     "n": 367,
+     "text": "        historyIndex = history.length - 1;"
+    },
+    {
+     "op": " ",
+     "n": 368,
+     "text": "      }"
+    },
+    {
+     "op": " ",
+     "n": 369,
+     "text": "    } catch (e) {"
+    },
+    {
+     "op": " ",
+     "n": 370,
+     "text": "      error = e.message;"
+    },
+    {
+     "op": " ",
+     "n": 371,
+     "text": "    } finally {"
+    },
+    {
+     "op": " ",
+     "n": 372,
+     "text": "      loading = false;"
+    },
+    {
+     "op": " ",
+     "n": 373,
+     "text": "    }"
+    },
+    {
+     "op": " ",
+     "n": 374,
+     "text": "  }"
+    }
+   ],
+   "in": [],
+   "out": [],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "The file list now sends sort and order parameters to the API when fetching browse results."
+  },
+  {
+   "id": "backend/main.go:sortEntries",
+   "name": "sortEntries",
+   "file": "backend/main.go",
+   "kind": "func",
+   "layer": "logic",
+   "status": "added",
+   "signature": "func sortEntries(files []FileEntry, by string, desc bool)",
+   "lines": [
+    {
+     "op": "+",
+     "n": 830,
+     "text": "func sortEntries(files []FileEntry, by string, desc bool) {"
+    },
+    {
+     "op": "+",
+     "n": 831,
+     "text": "\tsort.SliceStable(files, func(i, j int) bool {"
+    },
+    {
+     "op": "+",
+     "n": 832,
+     "text": "\t\ta, b := files[i], files[j]"
+    },
+    {
+     "op": "+",
+     "n": 833,
+     "text": "\t\tif a.IsDir != b.IsDir {"
+    },
+    {
+     "op": "+",
+     "n": 834,
+     "text": "\t\t\treturn a.IsDir"
+    },
+    {
+     "op": "+",
+     "n": 835,
+     "text": "\t\t}"
+    },
+    {
+     "op": "+",
+     "n": 836,
+     "text": "\t\tless, same := false, false"
+    },
+    {
+     "op": "+",
+     "n": 837,
+     "text": "\t\tswitch by {"
+    },
+    {
+     "op": "+",
+     "n": 838,
+     "text": "\t\tcase \"size\":"
+    },
+    {
+     "op": "+",
+     "n": 839,
+     "text": "\t\t\tless, same = a.Size < b.Size, a.Size == b.Size"
+    },
+    {
+     "op": "+",
+     "n": 840,
+     "text": "\t\tcase \"modified\":"
+    },
+    {
+     "op": "+",
+     "n": 841,
+     "text": "\t\t\tless, same = a.ModTime.Before(b.ModTime), a.ModTime.Equal(b.ModTime)"
+    },
+    {
+     "op": "+",
+     "n": 842,
+     "text": "\t\tdefault:"
+    },
+    {
+     "op": "+",
+     "n": 843,
+     "text": "\t\t\tan, bn := strings.ToLower(a.Name), strings.ToLower(b.Name)"
+    },
+    {
+     "op": "+",
+     "n": 844,
+     "text": "\t\t\tless, same = an < bn, an == bn"
+    },
+    {
+     "op": "+",
+     "n": 845,
+     "text": "\t\t}"
+    },
+    {
+     "op": "+",
+     "n": 846,
+     "text": "\t\tif same {"
+    },
+    {
+     "op": "+",
+     "n": 847,
+     "text": "\t\t\treturn strings.ToLower(a.Name) < strings.ToLower(b.Name)"
+    },
+    {
+     "op": "+",
+     "n": 848,
+     "text": "\t\t}"
+    },
+    {
+     "op": "+",
+     "n": 849,
+     "text": "\t\tif desc {"
+    },
+    {
+     "op": "+",
+     "n": 850,
+     "text": "\t\t\treturn !less"
+    },
+    {
+     "op": "+",
+     "n": 851,
+     "text": "\t\t}"
+    },
+    {
+     "op": "+",
+     "n": 852,
+     "text": "\t\treturn less"
+    },
+    {
+     "op": "+",
+     "n": 853,
+     "text": "\t})"
+    },
+    {
+     "op": "+",
+     "n": 854,
+     "text": "}"
+    }
+   ],
+   "in": [
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:sortEntries",
+     "kind": "calls",
+     "line": 822,
+     "text": "sortEntries(files, r.URL.Query().Get(\"sort\"), r.URL.Query().Get(\"order\") == \"desc\")"
+    }
+   ],
+   "out": [],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "tests": {
+    "node": "backend/main.go:sortEntries",
+    "code": "package main\n\nimport (\n\t\"testing\"\n\t\"time\"\n)\n\nfunc trustFileEntry(name string, isDir bool, size int64, modTime time.Time) FileEntry {\n\treturn FileEntry{Name: name, IsDir: isDir, Size: size, ModTime: modTime}\n}\n\nfunc trustSortEntries(files []FileEntry, by string, desc bool) []FileEntry {\n\tsortEntries(files, by, desc)\n\treturn files\n}\n\nfunc trustNames(files []FileEntry) []string {\n\tnames := make([]string, len(files))\n\tfor i, f := range files {\n\t\tnames[i] = f.Name\n\t}\n\treturn names\n}\n\nfunc TestTrust_SortByNameAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"b.txt\", false, 100, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 200, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 50, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortByNameDescending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 100, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 200, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 50, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortBySizeAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"big.txt\", false, 1000, time.Now()),\n\t\ttrustFileEntry(\"small.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"medium.txt\", false, 100, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"small.txt\", \"medium.txt\", \"big.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortBySizeDescending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"small.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"big.txt\", false, 1000, time.Now()),\n\t\ttrustFileEntry(\"medium.txt\", false, 100, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"big.txt\", \"medium.txt\", \"small.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortByModifiedAscending(t *testing.T) {\n\told := time.Now().Add(-2 * time.Hour)\n\trecent := time.Now().Add(-time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"new.txt\", false, 10, now),\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"mid.txt\", false, 10, recent),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", false))\n\twant := []string{\"old.txt\", \"mid.txt\", \"new.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortByModifiedDescending(t *testing.T) {\n\told := time.Now().Add(-2 * time.Hour)\n\trecent := time.Now().Add(-time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"mid.txt\", false, 10, recent),\n\t\ttrustFileEntry(\"new.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"new.txt\", \"mid.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortUnknownSortDefaultsToName(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"z.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"bogus\", false))\n\twant := []string{\"a.txt\", \"z.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortFoldersFirstAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"docs\", true, 0, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"archive\", true, 0, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"archive\", \"docs\", \"a.txt\", \"b.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortFoldersFirstDescending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"docs\", true, 0, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"archive\", true, 0, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", true))\n\twant := []string{\"archive\", \"docs\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"B.txt\", false, 100, now),\n\t\ttrustFileEntry(\"a.txt\", false, 100, now),\n\t\ttrustFileEntry(\"A.txt\", false, 100, now),\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"A.txt\", \"a.txt\", \"B.txt\", \"b.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortEmptyList(t *testing.T) {\n\tfiles := []FileEntry{}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\tif len(got) != 0 {\n\t\tt.Errorf(\"expected empty list, got %v\", got)\n\t}\n}\n\nfunc TestTrust_SortSingleEntry(t *testing.T) {\n\tfiles := []FileEntry{trustFileEntry(\"only.txt\", false, 42, time.Now())}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"only.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortSizeDescendingLargestFileFirstAfterFolders(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"small.txt\", false, 10, now),\n\t\ttrustFileEntry(\"big.txt\", false, 5000, now),\n\t\ttrustFileEntry(\"folder\", true, 0, now),\n\t\ttrustFileEntry(\"medium.txt\", false, 500, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"folder\", \"big.txt\", \"medium.txt\", \"small.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortIsStableForEqualKeys(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t\ttrustFileEntry(\"a.txt\", false, 100, now),\n\t\ttrustFileEntry(\"c.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortCaseInsensitiveNameOrder(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"Beta.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"alpha.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"Gamma.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"alpha.txt\", \"Beta.txt\", \"Gamma.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortModifiedDescendingNewestFirst(t *testing.T) {\n\told := time.Now().Add(-3 * time.Hour)\n\tmid := time.Now().Add(-2 * time.Hour)\n\tnew := time.Now().Add(-time.Hour)\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"new.txt\", false, 10, new),\n\t\ttrustFileEntry(\"mid.txt\", false, 10, mid),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"new.txt\", \"mid.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortModifiedTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"C.txt\", false, 10, now),\n\t\ttrustFileEntry(\"a.txt\", false, 10, now),\n\t\ttrustFileEntry(\"B.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", false))\n\twant := []string{\"a.txt\", \"B.txt\", \"C.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortSizeTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 100, now),\n\t\ttrustFileEntry(\"A.txt\", false, 100, now),\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"A.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortNameTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 10, now),\n\t\ttrustFileEntry(\"A.txt\", false, 10, now),\n\t\ttrustFileEntry(\"b.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"A.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortDescendingReversesNameOrder(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortDescendingReversesSizeOrder(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 100, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 50, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"b.txt\", \"c.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortDescendingReversesModifiedOrder(t *testing.T) {\n\told := time.Now().Add(-2 * time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"new.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"new.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortFoldersFirstRegardlessOfSortKey(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"z.txt\", false, 10, now),\n\t\ttrustFileEntry(\"alpha\", true, 0, now),\n\t\ttrustFileEntry(\"a.txt\", false, 10, now),\n\t\ttrustFileEntry(\"beta\", true, 0, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"alpha\", \"beta\", \"a.txt\", \"z.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortFoldersTiedByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"Docs\", true, 0, now),\n\t\ttrustFileEntry(\"alpha\", true, 0, now),\n\t\ttrustFileEntry(\"Beta\", true, 0, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"alpha\", \"Beta\", \"Docs\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortAllFilesSameSizeDescendingByName(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 100, now),\n\t\ttrustFileEntry(\"a.txt\", false, 100, now),\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortAllFilesSameModifiedDescendingByName(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 10, now),\n\t\ttrustFileEntry(\"a.txt\", false, 10, now),\n\t\ttrustFileEntry(\"b.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortEmptyStringSortDefaultsToName(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"z.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"\", false))\n\twant := []string{\"a.txt\", \"z.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortOrderDescFalseMeansAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortMixedDirsAndFilesSizeDescending(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"tiny.txt\", false, 5, now),\n\t\ttrustFileEntry(\"archive\", true, 0, now),\n\t\ttrustFileEntry(\"huge.txt\", false, 5000, now),\n\t\ttrustFileEntry(\"docs\", true, 0, now),\n\t\ttrustFileEntry(\"medium.txt\", false, 500, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"archive\", \"docs\", \"huge.txt\", \"medium.txt\", \"tiny.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortMixedDirsAndFilesModifiedDescending(t *testing.T) {\n\told := time.Now().Add(-3 * time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"recent.txt\", false, 10, now),\n\t\ttrustFileEntry(\"archive\", true, 0, old),\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"docs\", true, 0, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"archive\", \"docs\", \"recent.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortDoesNotModifyOriginalSliceOrderWhenAlreadySorted(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 20, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 30, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}\n\nfunc TestTrust_SortStringsEqualIgnoreCaseButDifferentCase(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"FILE.TXT\", false, 10, now),\n\t\ttrustFileEntry(\"file.txt\", false, 10, now),\n\t\ttrustFileEntry(\"File.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"File.txt\", \"FILE.TXT\", \"file.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+    "guard_code": "",
+    "rounds": [
+     {
+      "round": 1,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 33.4,
+       "tokens": 6383,
+       "cached": false
+      },
+      "compiled": false,
+      "coverage": null,
+      "tests": 0,
+      "error": "./trust_gen_test.go:4:2: \"sort\" imported and not used\n./trust_gen_test.go:5:2: \"strings\" imported and not used\n./trust_gen_test.go:515:3: undefined: trustFile_entry"
+     },
+     {
+      "round": 2,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 33.7,
+       "tokens": 11923,
+       "cached": false
+      },
+      "compiled": true,
+      "coverage": 100.0,
+      "tests": 32
+     }
+    ],
+    "coverage": 100.0,
+    "uncovered": [],
+    "base_compiled": false,
+    "tests": [
+     {
+      "name": "TestTrust_SortAllFilesSameModifiedDescendingByName",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected \"c.txt\" at index 0, got \"a.txt\"",
+       "expected \"a.txt\" at index 2, got \"c.txt\""
+      ],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       840,
+       841,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortAllFilesSameModifiedDescendingByName(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 10, now),\n\t\ttrustFileEntry(\"a.txt\", false, 10, now),\n\t\ttrustFileEntry(\"b.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortAllFilesSameSizeDescendingByName",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected \"c.txt\" at index 0, got \"a.txt\"",
+       "expected \"a.txt\" at index 2, got \"c.txt\""
+      ],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortAllFilesSameSizeDescendingByName(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 100, now),\n\t\ttrustFileEntry(\"a.txt\", false, 100, now),\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByModifiedAscending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       840,
+       841,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortByModifiedAscending(t *testing.T) {\n\told := time.Now().Add(-2 * time.Hour)\n\trecent := time.Now().Add(-time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"new.txt\", false, 10, now),\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"mid.txt\", false, 10, recent),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", false))\n\twant := []string{\"old.txt\", \"mid.txt\", \"new.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByModifiedDescending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       840,
+       841,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortByModifiedDescending(t *testing.T) {\n\told := time.Now().Add(-2 * time.Hour)\n\trecent := time.Now().Add(-time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"mid.txt\", false, 10, recent),\n\t\ttrustFileEntry(\"new.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"new.txt\", \"mid.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByNameAscending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortByNameAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"b.txt\", false, 100, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 200, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 50, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortByNameDescending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortByNameDescending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 100, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 200, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 50, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortBySizeAscending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortBySizeAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"big.txt\", false, 1000, time.Now()),\n\t\ttrustFileEntry(\"small.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"medium.txt\", false, 100, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"small.txt\", \"medium.txt\", \"big.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortBySizeDescending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortBySizeDescending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"small.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"big.txt\", false, 1000, time.Now()),\n\t\ttrustFileEntry(\"medium.txt\", false, 100, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"big.txt\", \"medium.txt\", \"small.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortCaseInsensitiveNameOrder",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortCaseInsensitiveNameOrder(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"Beta.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"alpha.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"Gamma.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"alpha.txt\", \"Beta.txt\", \"Gamma.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortDescendingReversesModifiedOrder",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       840,
+       841,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortDescendingReversesModifiedOrder(t *testing.T) {\n\told := time.Now().Add(-2 * time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"new.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"new.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortDescendingReversesNameOrder",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortDescendingReversesNameOrder(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", true))\n\twant := []string{\"c.txt\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortDescendingReversesSizeOrder",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortDescendingReversesSizeOrder(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 100, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 50, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"b.txt\", \"c.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortDoesNotModifyOriginalSliceOrderWhenAlreadySorted",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortDoesNotModifyOriginalSliceOrderWhenAlreadySorted(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 20, time.Now()),\n\t\ttrustFileEntry(\"c.txt\", false, 30, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortEmptyList",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831
+      ],
+      "source": "func TestTrust_SortEmptyList(t *testing.T) {\n\tfiles := []FileEntry{}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\tif len(got) != 0 {\n\t\tt.Errorf(\"expected empty list, got %v\", got)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortEmptyStringSortDefaultsToName",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortEmptyStringSortDefaultsToName(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"z.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"\", false))\n\twant := []string{\"a.txt\", \"z.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortFoldersFirstAscending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       834,
+       835,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortFoldersFirstAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"docs\", true, 0, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"archive\", true, 0, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"archive\", \"docs\", \"a.txt\", \"b.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortFoldersFirstDescending",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected \"archive\" at index 0, got \"docs\"",
+       "expected \"docs\" at index 1, got \"archive\""
+      ],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       834,
+       835,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortFoldersFirstDescending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"docs\", true, 0, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"archive\", true, 0, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", true))\n\twant := []string{\"archive\", \"docs\", \"b.txt\", \"a.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortFoldersFirstRegardlessOfSortKey",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       834,
+       835,
+       836,
+       837,
+       838,
+       839,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortFoldersFirstRegardlessOfSortKey(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"z.txt\", false, 10, now),\n\t\ttrustFileEntry(\"alpha\", true, 0, now),\n\t\ttrustFileEntry(\"a.txt\", false, 10, now),\n\t\ttrustFileEntry(\"beta\", true, 0, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"alpha\", \"beta\", \"a.txt\", \"z.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortFoldersTiedByNameCaseInsensitive",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortFoldersTiedByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"Docs\", true, 0, now),\n\t\ttrustFileEntry(\"alpha\", true, 0, now),\n\t\ttrustFileEntry(\"Beta\", true, 0, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"alpha\", \"Beta\", \"Docs\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortIsStableForEqualKeys",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortIsStableForEqualKeys(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t\ttrustFileEntry(\"a.txt\", false, 100, now),\n\t\ttrustFileEntry(\"c.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortMixedDirsAndFilesModifiedDescending",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected \"archive\" at index 0, got \"docs\"",
+       "expected \"docs\" at index 1, got \"archive\""
+      ],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       834,
+       835,
+       836,
+       837,
+       840,
+       841,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortMixedDirsAndFilesModifiedDescending(t *testing.T) {\n\told := time.Now().Add(-3 * time.Hour)\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"recent.txt\", false, 10, now),\n\t\ttrustFileEntry(\"archive\", true, 0, old),\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"docs\", true, 0, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"archive\", \"docs\", \"recent.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortMixedDirsAndFilesSizeDescending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       834,
+       835,
+       836,
+       837,
+       838,
+       839,
+       846,
+       847,
+       848,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortMixedDirsAndFilesSizeDescending(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"tiny.txt\", false, 5, now),\n\t\ttrustFileEntry(\"archive\", true, 0, now),\n\t\ttrustFileEntry(\"huge.txt\", false, 5000, now),\n\t\ttrustFileEntry(\"docs\", true, 0, now),\n\t\ttrustFileEntry(\"medium.txt\", false, 500, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"archive\", \"docs\", \"huge.txt\", \"medium.txt\", \"tiny.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortModifiedDescendingNewestFirst",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       840,
+       841,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortModifiedDescendingNewestFirst(t *testing.T) {\n\told := time.Now().Add(-3 * time.Hour)\n\tmid := time.Now().Add(-2 * time.Hour)\n\tnew := time.Now().Add(-time.Hour)\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"old.txt\", false, 10, old),\n\t\ttrustFileEntry(\"new.txt\", false, 10, new),\n\t\ttrustFileEntry(\"mid.txt\", false, 10, mid),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"new.txt\", \"mid.txt\", \"old.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortModifiedTiesByNameCaseInsensitive",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       840,
+       841,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortModifiedTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"C.txt\", false, 10, now),\n\t\ttrustFileEntry(\"a.txt\", false, 10, now),\n\t\ttrustFileEntry(\"B.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"modified\", false))\n\twant := []string{\"a.txt\", \"B.txt\", \"C.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortNameTiesByNameCaseInsensitive",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortNameTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 10, now),\n\t\ttrustFileEntry(\"A.txt\", false, 10, now),\n\t\ttrustFileEntry(\"b.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"A.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortOrderDescFalseMeansAscending",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortOrderDescFalseMeansAscending(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"b.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"a.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortSingleEntry",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831
+      ],
+      "source": "func TestTrust_SortSingleEntry(t *testing.T) {\n\tfiles := []FileEntry{trustFileEntry(\"only.txt\", false, 42, time.Now())}\n\tgot := trustNames(trustSortEntries(files, \"modified\", true))\n\twant := []string{\"only.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortSizeDescendingLargestFileFirstAfterFolders",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       834,
+       835,
+       836,
+       837,
+       838,
+       839,
+       846,
+       849,
+       850,
+       851
+      ],
+      "source": "func TestTrust_SortSizeDescendingLargestFileFirstAfterFolders(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"small.txt\", false, 10, now),\n\t\ttrustFileEntry(\"big.txt\", false, 5000, now),\n\t\ttrustFileEntry(\"folder\", true, 0, now),\n\t\ttrustFileEntry(\"medium.txt\", false, 500, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", true))\n\twant := []string{\"folder\", \"big.txt\", \"medium.txt\", \"small.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortSizeTiesByNameCaseInsensitive",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortSizeTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"c.txt\", false, 100, now),\n\t\ttrustFileEntry(\"A.txt\", false, 100, now),\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"A.txt\", \"b.txt\", \"c.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortStringsEqualIgnoreCaseButDifferentCase",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected \"File.txt\" at index 0, got \"FILE.TXT\"",
+       "expected \"FILE.TXT\" at index 1, got \"file.txt\"",
+       "expected \"file.txt\" at index 2, got \"File.txt\""
+      ],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortStringsEqualIgnoreCaseButDifferentCase(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"FILE.TXT\", false, 10, now),\n\t\ttrustFileEntry(\"file.txt\", false, 10, now),\n\t\ttrustFileEntry(\"File.txt\", false, 10, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"name\", false))\n\twant := []string{\"File.txt\", \"FILE.TXT\", \"file.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortTiesByNameCaseInsensitive",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected \"A.txt\" at index 0, got \"a.txt\"",
+       "expected \"a.txt\" at index 1, got \"A.txt\""
+      ],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       838,
+       839,
+       846,
+       847,
+       848
+      ],
+      "source": "func TestTrust_SortTiesByNameCaseInsensitive(t *testing.T) {\n\tnow := time.Now()\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"B.txt\", false, 100, now),\n\t\ttrustFileEntry(\"a.txt\", false, 100, now),\n\t\ttrustFileEntry(\"A.txt\", false, 100, now),\n\t\ttrustFileEntry(\"b.txt\", false, 100, now),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"size\", false))\n\twant := []string{\"A.txt\", \"a.txt\", \"B.txt\", \"b.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_SortUnknownSortDefaultsToName",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       830,
+       831,
+       832,
+       833,
+       836,
+       837,
+       842,
+       843,
+       844,
+       846,
+       849,
+       852
+      ],
+      "source": "func TestTrust_SortUnknownSortDefaultsToName(t *testing.T) {\n\tfiles := []FileEntry{\n\t\ttrustFileEntry(\"z.txt\", false, 10, time.Now()),\n\t\ttrustFileEntry(\"a.txt\", false, 10, time.Now()),\n\t}\n\tgot := trustNames(trustSortEntries(files, \"bogus\", false))\n\twant := []string{\"a.txt\", \"z.txt\"}\n\tfor i := range want {\n\t\tif got[i] != want[i] {\n\t\t\tt.Errorf(\"expected %q at index %d, got %q\", want[i], i, got[i])\n\t\t}\n\t}\n}",
+      "origin": "new"
+     }
+    ],
+    "duplicates": [],
+    "dropped": []
+   },
+   "explain": "Sorts file entries with folders first, then by name, size, or modified date in ascending or descending order."
+  },
+  {
+   "id": "frontend/src/FileBrowser.svelte:markup",
+   "name": "FileBrowser.svelte",
+   "file": "frontend/src/FileBrowser.svelte",
+   "kind": "component",
+   "layer": "visual",
+   "status": "changed",
+   "signature": "",
+   "lines": [
+    {
+     "op": " ",
+     "n": 572,
+     "text": "      {:else if viewMode === 'list'}"
+    },
+    {
+     "op": " ",
+     "n": 573,
+     "text": "        <div class=\"list-header\">"
+    },
+    {
+     "op": " ",
+     "n": 574,
+     "text": "          <div class=\"lh-icon\"></div>"
+    },
+    {
+     "op": "-",
+     "n": 566,
+     "text": "          <div class=\"lh-name\">Name</div>"
+    },
+    {
+     "op": "-",
+     "n": 567,
+     "text": "          <div class=\"lh-size\">Size</div>"
+    },
+    {
+     "op": "-",
+     "n": 568,
+     "text": "          <div class=\"lh-date\">Date Modified</div>"
+    },
+    {
+     "op": "+",
+     "n": 575,
+     "text": "          <button class=\"lh-name lh-sort\" class:active={sortBy === 'name'} onclick={() => sortOn('name')}>Name{#if sortBy === 'name'}<span class=\"lh-arrow\">{sortDesc ? '\u25bc' : '\u25b2'}</span>{/if}</button>"
+    },
+    {
+     "op": "+",
+     "n": 576,
+     "text": "          <button class=\"lh-size lh-sort\" class:active={sortBy === 'size'} onclick={() => sortOn('size')}>Size{#if sortBy === 'size'}<span class=\"lh-arrow\">{sortDesc ? '\u25bc' : '\u25b2'}</span>{/if}</button>"
+    },
+    {
+     "op": "+",
+     "n": 577,
+     "text": "          <button class=\"lh-date lh-sort\" class:active={sortBy === 'modified'} onclick={() => sortOn('modified')}>Date Modified{#if sortBy === 'modified'}<span class=\"lh-arrow\">{sortDesc ? '\u25bc' : '\u25b2'}</span>{/if}</button>"
+    },
+    {
+     "op": " ",
+     "n": 578,
+     "text": "          <div class=\"lh-act\"></div>"
+    },
+    {
+     "op": " ",
+     "n": 579,
+     "text": "        </div>"
+    },
+    {
+     "op": " ",
+     "n": 580,
+     "text": "        <div class=\"list-body\">"
+    }
+   ],
+   "in": [],
+   "out": [],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "Clicking column headers sorts files by name, size, or date modified, with folders first and an arrow showing the active order.",
+   "shots": [
+    {
+     "name": "sort by size",
+     "before": "shots/v9/before-sort_by_size.png",
+     "after": "shots/v9/after-sort_by_size.png"
+    }
+   ]
+  }
+ ],
+ "lines_changed": 34,
+ "commit": {
+  "hash": "a205ea87fcf4a46996a56c447f7d6f99aec45d2d",
+  "author": "vault-agent",
+  "date": "15 Nov 04:25",
+  "subject": "REQ-V9: sort the file list by name, size or date",
+  "body": ""
+ }
+}

@@ -142,8 +142,9 @@ function detail(t, c) {
   const from = t.origin === "kept" ? `saved from ${esc(c.label(t.written_for))}` : "written for this commit";
   return `<b>${t.head ? "✓" : "✗"} ${esc(sentence(t.name))}</b>
     <span>${t.head ? "passes" : "fails"} now · ${t.base ? "passed" : "failed"} before · ${from}${t.status === "pending" ? " · trusted after merge" : ""}</span>
+    ${t.meaning === "fails on both" && t.message?.length ? `<span>${esc(t.message[0])}</span>` : ""}
     <span class="go">${t.lines.length ? `<button data-jump="${t.lines.join(",")}">show the ${t.lines.length} lines it runs</button>` : ""}${
-      t.head ? "" : `<button data-card-for="${esc(t.name)}">why it fails</button>`}</span>`;
+      t.head || t.meaning === "fails on both" ? "" : `<button data-card-for="${esc(t.name)}">why it fails</button>`}</span>`;
 }
 
 export function renderSide(el, d, caseId, u) {
@@ -166,6 +167,12 @@ export function renderSide(el, d, caseId, u) {
     for (const [q, pick] of QUESTIONS) {
       const group = ts.filter(pick);
       if (!group.length) continue;
+      if (q.startsWith("Fails before")) { // not evidence: one quiet line, open to inspect
+        h += `<details class="q noise"><summary>${group.length} test${group.length === 1 ? "" : "s"} failed before and after · not counted</summary>
+          <div class="boxes">${group.map((t) => `<button class="box fail" data-test="${esc(t.name)}" aria-pressed="false" aria-label="${esc(sentence(t.name))}, fails">✗</button>`).join("")}</div>
+          <div class="tdetail" hidden></div></details>`;
+        continue;
+      }
       const bad = group.filter((t) => !t.head).length;
       h += `<div class="q"><h4>${esc(q.replace("%REQ%", d.case.id))}<span class="${bad ? "bad" : ""}">${bad ? `${bad} of ${group.length} fail` : `${group.length} pass`}</span></h4>
         <div class="boxes">${group.map((t) => `<button class="box ${t.head ? "" : "fail"} ${t.origin === "kept" ? "kept" : "new"}" data-test="${esc(t.name)}" aria-pressed="false" aria-label="${esc(sentence(t.name))}, ${t.head ? "passes" : "fails"}">${t.head ? "✓" : "✗"}</button>`).join("")}</div>
@@ -176,7 +183,7 @@ export function renderSide(el, d, caseId, u) {
       const gaps = runs(u.tests.uncovered || []);
       h += `<div class="cov-line">${Math.round(cov)}% of lines run${gaps.length ? " · never: " + gaps.map((r) => `<button data-jump="${r[0]}">${span(r)}</button>`).join(", ") : ""}</div>`;
     }
-    const failed = ts.filter((t) => !t.head).sort((a, b) => (b.base - a.base));
+    const failed = ts.filter((t) => !t.head && t.meaning !== "fails on both").sort((a, b) => (b.base - a.base));
     if (failed.length) {
       h += `<div class="failed">${failed.map((t) => `<div class="fcard" data-card="${esc(t.name)}"><b>${esc(sentence(t.name))}</b>
         ${t.message?.length ? `<div class="why">${esc(t.message[0])}</div>` : ""}
