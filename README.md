@@ -17,7 +17,7 @@ at what they have to decide. Built for Junction 2026 (Tieto: Earned Trust in AI 
   Each test knows the exact lines it runs.
 - **Tests are kept.** Tests whose intent is trusted are saved per project and run again on later
   commits; a requirement's tests join only after a human merges it. In the review each test is a box:
-  black passes, orange fails, and a + marks a test written for this commit.
+  ✓ passes, ✗ fails; pick one to read the test, its result before and now, and where it came from.
 - **Visual changes** are shown as before/after screenshots of the real app at both commits.
 - **The dino** walks along the bottom. Click it to ask about the open commit; it answers only from
   that commit's review and never makes the decision.

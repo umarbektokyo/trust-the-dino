@@ -296,7 +296,8 @@ export function mountCreature(root) {
     el.querySelector(".peek-title").textContent = hasCommit ? state.ctx.title || state.ctx.caseId : "trust";
     input.disabled = !hasCommit;
     if (!log.childElementCount) say("assistant", hasCommit ? "Ask me about this commit." : "Open a commit and ask me about it.");
-    if (hasCommit) input.focus();
+    // on touch screens focusing would pop the keyboard over the answer; the user taps the field when ready
+    if (hasCommit && !matchMedia("(pointer: coarse)").matches) input.focus();
   }
   function closeChat() { chat.hidden = true; state.talking = false; }
 

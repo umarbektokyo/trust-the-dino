@@ -158,7 +158,6 @@ A violation is not a block: it is shown on the node ("not unit-testable: reads o
 | test generation, sample props | `nvidia/nemotron-3.5-lightning-30b-a3b` (NVIDIA Build API, OpenAI-compatible) | ~1–2 s, many calls |
 | screenshot comparison, summary of a change | `nvidia/nemotron-3.5-super-vl-120b-a12b` | reads images; required for the Nemotron prize |
 | running generated tests | **Modal Sandboxes**, one per node, fanned out | parallel, isolated from our machine; Modal prize |
-| fallback | logged-in `claude` CLI, cached (as in `earned-trust`) | when rate limits hit (~40 req/min per key) |
 
 Both models answered on 15 Nov. They reason by default (`reasoning_content`, ~800 tokens for a tiny
 prompt), so give `max_tokens` ≥ 4000 and read only `content`. Tell it not to redefine the function
@@ -270,7 +269,7 @@ Order: 1 → 2 → 3 → 5 → 4 → 6.
 - JDK: `brew install openjdk` done (27.0.1), keg-only: use `/opt/homebrew/opt/openjdk/bin/java`.
 - vault's frontend is 3 big components (FileBrowser is 1746 lines): the Svelte split will show
   few, large nodes. That is itself a guideline finding ("split this component").
-- NVIDIA free tier rate limits: cache everything, one key per teammate, Claude CLI fallback.
+- NVIDIA free tier rate limits: cache everything, one key per teammate.
 - AI tests that assert whatever the code does today are worthless as evidence of a requirement.
   Mitigation: the base-vs-head run (step 5.4), and say this limit out loud in the concept card.
 - tree-sitter call edges are name-based; calls through interfaces are missed. State it as a limit.

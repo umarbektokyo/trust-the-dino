@@ -41,4 +41,5 @@
 /* phones: a smaller dino (the chat keeps its full size and stays on screen, see placeChat) */
 @media (max-width: 720px) {
   .peek-body { transform: scale(.75); transform-origin: 50% 100%; }
+  .peek-input, .peek-msg { font-size: 16px; } /* under 16px, iOS zooms the page when the field gets focus */
 }

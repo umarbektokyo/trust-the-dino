@@ -6,6 +6,5 @@ decisions.json
 .env
 .DS_Store
 __pycache__/
-.claude/
 video/raw/
 video/*.webm
