@@ -1,8 +1,11 @@
 // A pixel T-Rex. It runs along the bottom of the window, sits, types, reads, sleeps or stargazes when idle, its back spines turn orange when something waits on you, and clicking it opens a chat
 // about the open commit (answers come from /api/chat and only use that commit's review data).
+// With WebGL it is drawn by a shader (dinofx.js): rim light, a dusk sky when it stargazes, heat when you are needed.
 //
 //   const dino = mountCreature(document.body);
 //   dino.setContext({ screen, project, branch, caseId, unitId });
+
+import { dinoFx } from "./dinofx.js";
 
 const CELL = 4; // px per pixel
 const FLOOR = 6; // px between the window's bottom edge and the ground (matches .peek bottom)
@@ -140,6 +143,8 @@ export function mountCreature(root) {
   const input = el.querySelector(".peek-input");
 
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fx = dinoFx(body, CELL);
+  const glow = { sky: 0, heat: 0 }; // eased toward their targets one step per draw
   // x: px from the left; y: px above the floor; vy: falling speed; rest: tick until it may wander again;
   // act: the idle activity {name, start, end} in ticks; since: tick the current screen opened; waved: tick of the last wave
   const state = { x: innerWidth - 140, y: 0, vy: 0, held: false, rest: 0, target: null, dir: -1, step: 0,
@@ -161,7 +166,15 @@ export function mountCreature(root) {
     let pose = still && m === "idle" ? "sit" : "stand", t = 0;
     if (m === "acting") [pose, t] = actPose(state.act, state.tick);
     const legs = m === "held" || m === "falling" ? "dangle" : m === "walking" ? (state.step % 2 ? "stepA" : "stepB") : "stand";
-    body.innerHTML = svg(frame({ blink: state.blink, facing: state.dir, legs, signal: state.signal, pose, t }));
+    const grid = frame({ blink: state.blink, facing: state.dir, legs, signal: state.signal, pose, t });
+    body.querySelector("svg")?.remove();
+    body.insertAdjacentHTML("afterbegin", svg(grid)); // kept under the shader canvas for layout, and as the fallback
+    if (fx) {
+      const ease = (k, to) => (glow[k] += Math.sign(to - glow[k]) * Math.min(0.08, Math.abs(to - glow[k])));
+      ease("sky", pose === "stars" ? 1 : 0);
+      ease("heat", state.signal ? 1 : 0);
+      fx.draw(grid, { ...glow, t: still ? 0 : state.tick * 0.05 });
+    }
     el.style.transform = `translate(${Math.round(state.x)}px, ${-Math.round(state.y)}px)`;
   }
 

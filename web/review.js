@@ -5,6 +5,7 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&am
 const short = (id) => id.split(":").slice(1).join(":");
 
 import { decided, decide } from "./decisions.js";
+import { canDiff, pixelDiff } from "./pixeldiff.js";
 export { decided, isOpen } from "./decisions.js";
 
 export const tests = (u) => u.tests?.tests || [];
@@ -39,9 +40,16 @@ const span = (r) => r[0] === r[1] ? `${r[0]}` : `${r[0]}–${r[1]}`;
 
 const ref = (where, text) => `<div class="ref"><div class="where">${where}</div><div class="what">${hl(text)}</div></div>`;
 
+// how a before/after pair can be shown; "changes" needs WebGL (pixeldiff.js) and is left out without it
+const VIEWS = [["pair", "side by side", "Before and after next to each other"],
+               ["overlay", "compare", "One image, drag to move the divider"],
+               ["changes", "changes", "The after image with every changed pixel in orange"]].filter(([v]) => v !== "changes" || canDiff());
+
 function scene(s, i) {
   return `<div class="scene" data-scene="${i}">
-    <div class="scene-head"><span class="label">${esc(s.name)}</span><button class="label flip" data-flip>compare</button></div>
+    <div class="scene-head"><span class="label">${esc(s.name)}</span>
+      <span class="views" role="group" aria-label="How to show before and after">${VIEWS.map(([v, label, tip], j) =>
+        `<button class="label${j ? "" : " on"}" data-view="${v}" aria-pressed="${!j}" title="${tip}">${label}</button>`).join("")}</span></div>
     <div class="pair">
       <figure><figcaption class="label">before</figcaption><img src="../dossier/${esc(s.before)}" alt="before: ${esc(s.name)}"></figure>
       <figure><figcaption class="label">after</figcaption><img src="../dossier/${esc(s.after)}" alt="after: ${esc(s.name)}"></figure>
@@ -51,7 +59,22 @@ function scene(s, i) {
       <img class="before" src="../dossier/${esc(s.before)}" alt="before: ${esc(s.name)}">
       <i class="divider"></i><span class="label l">before</span><span class="label r">after</span>
     </div>
+    <div class="changes" hidden><span class="label">changed pixels</span></div>
   </div>`;
+}
+
+async function showView(sc, v) {
+  for (const b of sc.querySelectorAll("[data-view]")) {
+    b.classList.toggle("on", b.dataset.view === v);
+    b.setAttribute("aria-pressed", b.dataset.view === v);
+  }
+  for (const k of ["pair", "overlay", "changes"]) sc.querySelector("." + k).hidden = k !== v;
+  const box = sc.querySelector(".changes");
+  if (v !== "changes" || box.querySelector("canvas")) return;
+  const [before, after] = sc.querySelectorAll(".pair img");
+  const canvas = await pixelDiff(before, after);
+  if (canvas) { canvas.setAttribute("role", "img"); canvas.setAttribute("aria-label", "changed pixels: " + after.alt); box.prepend(canvas); }
+  else box.querySelector(".label").textContent = "couldn't compare these images";
 }
 
 export function renderMain(el, u) {
@@ -212,15 +235,8 @@ export function wireReview(ctx, rerender) {
     if (t.closest(".zoom")) return t.closest(".zoom").remove();
     const c = ctx();
     if (!c) return;
-    const flip = t.closest("[data-flip]");
-    if (flip) {
-      const sc = flip.closest(".scene");
-      const on = sc.querySelector(".overlay").hidden;
-      sc.querySelector(".overlay").hidden = !on;
-      sc.querySelector(".pair").hidden = on;
-      flip.textContent = on ? "side by side" : "compare";
-      return;
-    }
+    const view = t.closest("[data-view]");
+    if (view) return showView(view.closest(".scene"), view.dataset.view);
     const img = t.closest(".pair img");
     if (img) return document.body.append(Object.assign(document.createElement("div"), { className: "zoom", innerHTML: `<img src="${img.src}" alt="">` }));
     const j = t.closest("[data-jump]");

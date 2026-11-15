@@ -29,3 +29,11 @@
 .peek-input { width: 100%; box-sizing: border-box; border: 0; background: transparent; padding: 10px 12px;
               font: 13px "Helvetica Neue", Helvetica, Arial, sans-serif; outline: none; border-radius: 0 0 10px 10px; }
 .peek-input:disabled { color: #8a8981; }
+
+/* drawn by the shader (dinofx.js): the SVG keeps the size and hit area, the canvas paints over it and the sky beside it */
+.peek-body { position: relative; }
+.peek-gl { position: absolute; bottom: 0; pointer-events: none; image-rendering: pixelated; transition: transform .12s; }
+.peek-body:not(.gl) .peek-gl { display: none; }
+.peek-body.gl svg { visibility: hidden; }
+.peek-body:hover .peek-gl { transform: translateY(-2px); }
+.peek-body.land .peek-gl { transform: scale(1.1, .82); transform-origin: 50% 100%; }

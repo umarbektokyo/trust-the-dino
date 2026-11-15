@@ -89,6 +89,8 @@ a.commit:hover { background: #e9e8e2; }
 .commit.sel { background: var(--ink); color: var(--panel); }
 .commit.sel .meta { color: #a9a8a0; }
 .commit.sel i.dot:not(.hot) { background: var(--panel); }
+/* selected stays selected under the pointer: hover only lifts the dark background a step, the text keeps its contrast */
+a.commit.sel:hover { background: #2b2b28; }
 .units { padding: 4px 0 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .units .label { display: block; padding: 10px 18px 3px 44px; }
 .unit { display: flex; align-items: center; gap: 10px; width: 100%; padding: 5px 18px 5px 44px; font: 12px var(--mono); }
@@ -113,14 +115,22 @@ main { overflow: auto; min-width: 0; position: relative; }
 .shots { padding: 18px 28px 0; display: grid; gap: 18px; }
 .scene-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .scene-head > .label:first-child { color: var(--ink); }
-.flip { padding: 1px 6px; border: 1px solid var(--line); border-radius: 3px; }
-.flip:hover { color: var(--ink); border-color: var(--ink); }
+/* before/after: side by side | compare (swipe) | changes (pixel diff); one segmented switch */
+.views { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.views button { padding: 2px 8px; }
+.views button + button { border-left: 1px solid var(--line); }
+.views button:hover { color: var(--ink); background: var(--bg); }
+.views button.on { color: var(--panel); background: var(--ink); }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .pair figure { margin: 0; }
 .pair figcaption { margin-bottom: 6px; }
 .shots img { width: 100%; display: block; border-radius: 6px; border: 1px solid var(--line); }
 .pair img { cursor: zoom-in; }
-.overlay { position: relative; max-width: 760px; cursor: ew-resize; user-select: none; touch-action: none; }
+.overlay, .changes { width: 100%; max-width: 760px; margin: 0 auto; }  /* one image: centred under the pair's width */
+.changes canvas { width: 100%; display: block; border-radius: 6px; border: 1px solid var(--line); }
+.changes .label { display: block; margin-top: 6px; text-align: center; }
+.changes .label::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 2px; background: var(--hot); }
+.overlay { position: relative; cursor: ew-resize; user-select: none; touch-action: none; }
 .overlay img { pointer-events: none; -webkit-user-drag: none; }
 .overlay img.before { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--x)) 0 0); }
 .overlay .divider { position: absolute; top: 0; bottom: 0; left: var(--x); width: 1px; margin-left: -.5px; background: var(--ink); }
