@@ -139,7 +139,7 @@ async function story() {
   scene("Home");
   await dino(true);
   await glide([W * 0.42, H * 0.30], { ms: 900 });
-  await say("trust the dino: review agent code as a graph, not a diff.", 3200);
+  await say("trust the dino: review agent code as a graph, not a diff.", 2300);
 
   // 2. Connect vault-demo
   scene("Connect a repository");
@@ -158,9 +158,9 @@ async function story() {
   scene("REQ-V8: a UI change");
   await say("", 0);
   await click(`#nav a.branch[href*="${enc("agent/req-v8-preview-size")}"]`);
-  await wait(900);
+  await wait(600);
   await click("#main a.row");
-  await wait(900);
+  await wait(600);
   await click(`#nav a.unit[href*="${enc("Preview.svelte:markup")}"]`);
   await say("A UI change: the real app at both commits.", 2000);
   await glide(".scene .pair figure:nth-child(2) img", { ms: 800 });
@@ -172,15 +172,27 @@ async function story() {
   const oy = b.y + b.height / 2;
   await glide([b.x + b.width * 0.5, oy]);
   await page.mouse.down();
-  for (const f of [0.08, 0.92]) await glide([b.x + b.width * f, oy], { ms: 900 });
+  for (const f of [0.08, 0.92]) await glide([b.x + b.width * f, oy], { ms: 700 });
   await page.mouse.up();
+  await wait(500);
+  await say("Nothing risky, so the approver merges it.", 1200);
+  await click("#bar [data-merge]", { ms: 500 });
+  await page.locator("#bar .done").waitFor();
   await wait(700);
-  await click(`#nav a.branch[href*="${enc("agent/req-v8-preview-size")}"]`);
-  await glide("#main a.row .msg", { ms: 700 });
-  await say("Nothing risky, so the approver merges it.", 1400);
-  await click("#main a.row [data-merge]", { ms: 600 });
-  await page.locator("#main a.row .done").waitFor();
-  await wait(1400);
+
+  // 3b. REQ-V9: logic change, proven by Nemotron's tests, nothing routed
+  scene("REQ-V9: proven by tests");
+  await say("", 0);
+  await click(`#nav a.branch[href*="${enc("agent/req-v9-sort")}"]`);
+  await wait(700);
+  await click("#main a.row .msg");
+  await page.locator("#side .box").first().waitFor();
+  await glide("#side .boxes", { ms: 700 });
+  await say("New logic: Nemotron's tests fail before, pass after. That's the proof.", 2500);
+  await say("Nothing needs a human. Merged.", 900);
+  await click("#bar [data-merge]", { ms: 500 });
+  await page.locator("#bar .done").waitFor();
+  await wait(700);
 
   // 4. REQ-V7: the moved check
   scene("REQ-V7: the moved check");
@@ -192,15 +204,15 @@ async function story() {
   await wait(600);
   await scrollTo("#main .ln.guard");
   await glide("#main .ln.guard .note", { ms: 800 });
-  await say("One moved check. Its caller names a secrets file.", 3800);
+  await say("One moved check. Its caller names a secrets file.", 3300);
   await still("2-moved-check");
   await glide("#side .ask .ev", { ms: 800 });
-  await say("Routed to Aino Virtanen, Team Security, with three lines.", 3800);
+  await say("Routed to Aino Virtanen, Team Security, with three lines.", 3300);
 
   scene("REQ-V7: the tests");
   await glide("#side .box.fail", { ms: 800 });
   await page.mouse.move(mouse.x + 1, mouse.y + 1);           // make sure mouseover fires for the tip
-  await say("Nemotron's tests: passed before, fail now.", 3800);
+  await say("Nemotron's tests: passed before, fail now.", 3300);
   await still("3-failing-tests");
   await page.locator("#side").evaluate((el) => el.scrollBy({ top: 330, behavior: "smooth" }));
   await wait(700);
@@ -239,7 +251,7 @@ async function story() {
   await wait(500);
   await glide('#side .box[data-test^="TestTrustGuard_"]', { ms: 900 });
   await page.mouse.move(mouse.x + 1, mouse.y + 1);
-  await say("The fix is proven by the tests written for the bug.", 4200);
+  await say("The fix is proven by the tests written for the bug.", 3600);
   await glide("#bar [data-merge]", { ms: 900 });
   await say("Nothing routed. The approver merges.", 1400);
   await click("#bar [data-merge]", { ms: 200 });
@@ -257,12 +269,12 @@ async function story() {
   // carry the dino to the right of the caption, then click it
   const body = page.locator(".peek-body");
   const db = await body.boundingBox();
-  await glide([db.x + db.width / 2, db.y + db.height / 2], { ms: 900 });
+  await glide([db.x + db.width / 2, db.y + db.height / 2], { ms: 600 });
   await glide(body, { ms: 120 });                            // it may have walked a little
   await page.mouse.down();
-  await glide([W - 220, H - 160], { ms: 1100 });
+  await glide([W - 220, H - 160], { ms: 800 });
   await page.mouse.up();
-  await wait(1100);
+  await wait(700);
   await click(".peek-body", { ms: 400 });
   await page.locator(".peek-input").waitFor({ state: "visible" });
   await say("Ask the dino. It answers from the review, never decides.", 0);
@@ -277,7 +289,7 @@ async function story() {
     }, null, { timeout: 30000 });
   } catch { answered = false; console.log("dino did not answer in 30 s"); }
   await glide(".peek-log", { ms: 600, dy: 60 });
-  await wait(answered ? 4500 : 1500);
+  await wait(answered ? 3600 : 1500);
   await still("5-dino");
   await page.keyboard.press("Escape");
   await dino(false);

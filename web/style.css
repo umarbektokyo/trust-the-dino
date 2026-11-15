@@ -190,7 +190,8 @@ aside { background: var(--bg); overflow: auto; padding: 20px 20px 60px; }
 .key { font: 11px var(--mono); color: var(--mute); margin: -6px 0 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .kbox { width: 14px; height: 14px; border-radius: 3px; background: var(--ink); color: var(--paper); font: 600 9px/14px var(--sans);
         font-style: normal; text-align: center; }
-.kbox.fail { background: var(--hot); margin-left: 6px; }
+.kbox.fail { background: var(--hot); }
+.key span { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; }
 .qmeta { font: 10.5px var(--mono); color: var(--mute); margin-top: 6px; }
 /* tests that fail on both commits prove nothing: kept out of the way, still there to inspect */
 .q.noise summary { font: 11px var(--mono); color: var(--mute); cursor: pointer; list-style: none; }

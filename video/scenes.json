@@ -4,39 +4,43 @@
     "name": "Home"
   },
   {
-    "t": 4.7,
+    "t": 3.7,
     "name": "Connect a repository"
   },
   {
-    "t": 13.1,
+    "t": 12,
     "name": "REQ-V8: a UI change"
   },
   {
-    "t": 37.8,
+    "t": 31,
+    "name": "REQ-V9: proven by tests"
+  },
+  {
+    "t": 41.6,
     "name": "REQ-V7: the moved check"
   },
   {
-    "t": 56.4,
+    "t": 59.1,
     "name": "REQ-V7: the tests"
   },
   {
-    "t": 66.2,
+    "t": 68.3,
     "name": "REQ-V7: the leak in the app"
   },
   {
-    "t": 77.2,
+    "t": 79.3,
     "name": "REQ-V7: sent back"
   },
   {
-    "t": 85.3,
+    "t": 87.3,
     "name": "The fix commit"
   },
   {
-    "t": 98.1,
+    "t": 99.4,
     "name": "Ask the dino"
   },
   {
-    "t": 113.3,
+    "t": 112.6,
     "name": "End card"
   }
 ]

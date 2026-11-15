@@ -163,7 +163,7 @@ export function renderSide(el, d, caseId, u) {
   const ts = tests(u);
   if (ts.length) {
     h += `<div class="tests"><div class="label"><span>tests</span><span>by nemotron</span></div>
-      <div class="key"><i class="kbox">✓</i>passes <i class="kbox fail">✗</i>fails · pick a box to read the test</div>`;
+      <div class="key"><span><i class="kbox">✓</i> passes</span><span><i class="kbox fail">✗</i> fails</span><span>· pick a box to read the test</span></div>`;
     for (const [q, pick] of QUESTIONS) {
       const group = ts.filter(pick);
       if (!group.length) continue;
