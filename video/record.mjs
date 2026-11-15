@@ -139,7 +139,7 @@ async function story() {
   scene("Home");
   await dino(true);
   await glide([W * 0.42, H * 0.30], { ms: 900 });
-  await say("trust the dino: review agent code as a graph, not a diff.", 4200);
+  await say("trust the dino: review agent code as a graph, not a diff.", 3200);
 
   // 2. Connect vault-demo
   scene("Connect a repository");
@@ -151,7 +151,7 @@ async function story() {
   await wait(500);
   await click(".addrepo button.main");
   await page.waitForURL(/#\/p\/vault-demo/, { timeout: 120000 });
-  await wait(1800);
+  await wait(1200);
   await dino(false);
 
   // 3. REQ-V8: a visual change, nothing routed
@@ -172,12 +172,12 @@ async function story() {
   const oy = b.y + b.height / 2;
   await glide([b.x + b.width * 0.5, oy]);
   await page.mouse.down();
-  for (const f of [0.08, 0.92, 0.5]) await glide([b.x + b.width * f, oy], { ms: 1300 });
+  for (const f of [0.08, 0.92, 0.5]) await glide([b.x + b.width * f, oy], { ms: 900 });
   await page.mouse.up();
   await wait(700);
   await click(`#nav a.branch[href*="${enc("agent/req-v8-preview-size")}"]`);
   await glide("#main a.row .msg", { ms: 700 });
-  await say("Nothing risky, so no owner has to stop it.", 3200);
+  await say("Nothing risky, so no owner has to stop it.", 2600);
 
   // 4. REQ-V7: the moved check
   scene("REQ-V7: the moved check");
@@ -202,7 +202,7 @@ async function story() {
   await page.locator("#side").evaluate((el) => el.scrollBy({ top: 330, behavior: "smooth" }));
   await wait(700);
   await glide("#side .fcard b", { ms: 800 });
-  await say("Each failure says what it expected.", 3000);
+  await say("Each failure says what it expected.", 2400);
 
   scene("REQ-V7: the leak in the app");
   await click(`#nav a.unit[href*="${enc("FileBrowser.svelte:markup")}"]`);
@@ -212,7 +212,7 @@ async function story() {
   await wait(600);
   const z = await page.locator(".zoom img").boundingBox();     // point at .vault-secrets.json in the screenshot
   await glide([z.x + z.width * 0.175, z.y + z.height * 0.345], { ms: 900 });
-  await wait(2600);
+  await wait(2000);
   await still("4-leak");
   await click(".zoom");
   await say("", 400);
@@ -225,7 +225,7 @@ async function story() {
   await say("Security sends it back. A human decides, not the model.", 1600);
   await click('#side [data-dec="sent it back"]', { ms: 200 });
   await page.locator("#side .decided").waitFor();
-  await wait(2600);
+  await wait(1600);
 
   // 5. The fix
   scene("The fix commit");
@@ -239,7 +239,7 @@ async function story() {
   await say("Nothing routed. The approver merges.", 1400);
   await click("#bar [data-merge]", { ms: 200 });
   await page.locator("#bar .done").waitFor();
-  await wait(2200);
+  await wait(1400);
 
   // 6. Ask the dino
   scene("Ask the dino");
@@ -272,41 +272,15 @@ async function story() {
     }, null, { timeout: 30000 });
   } catch { answered = false; console.log("dino did not answer in 30 s"); }
   await glide(".peek-log", { ms: 600, dy: 60 });
-  await wait(answered ? 6000 : 1500);
+  await wait(answered ? 4500 : 1500);
   await still("5-dino");
   await page.keyboard.press("Escape");
   await dino(false);
 
-  // 7. Java
-  scene("Java: Waddenislands");
-  await click("#bar .crumbs a");
-  await wait(600);
-  await click('#main a.row.proj:has-text("Waddenislands")');
-  await wait(700);
-  await click(`#nav a.branch[href*="${enc("agent/req-w3")}"]`);
-  await wait(700);
-  await click("#main a.row");
-  await page.locator("#side .box").first().waitFor();
-  await say("Same pipeline for Java: JUnit tests, JaCoCo coverage.", 2400);
-  await click('#nav a.unit:has-text("Terminal.startTurnOver")');
-  await wait(2200);
-
-  // the walkthrough a first visit gets
-  scene("Walkthrough");
-  await say("", 0);
-  await click("#bar [data-tour]");
-  await page.locator(".tour:not(.moving) .tour-card").waitFor();
-  await say("First visit: a walkthrough of every part of the screen.", 3400);
-  await click(".tour [data-next]");
-  await page.locator(".tour:not(.moving) .tour-card").waitFor();
-  await wait(3000);
-  await page.keyboard.press("Escape");
-  await say("", 600);
-
   // 8. End card
   scene("End card");
   await page.evaluate(() => window.demo.end());
-  await wait(4800);
+  await wait(3500);
   await still("6-end");
 }
 

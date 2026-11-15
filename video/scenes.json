@@ -4,47 +4,39 @@
     "name": "Home"
   },
   {
-    "t": 5.6,
+    "t": 4.7,
     "name": "Connect a repository"
   },
   {
-    "t": 14.8,
+    "t": 13.1,
     "name": "REQ-V8: a UI change"
   },
   {
-    "t": 41.6,
+    "t": 37.3,
     "name": "REQ-V7: the moved check"
   },
   {
-    "t": 60.4,
+    "t": 56.2,
     "name": "REQ-V7: the tests"
   },
   {
-    "t": 70.8,
+    "t": 66,
     "name": "REQ-V7: the leak in the app"
   },
   {
-    "t": 82.2,
+    "t": 76.8,
     "name": "REQ-V7: sent back"
   },
   {
-    "t": 91.2,
+    "t": 84.8,
     "name": "The fix commit"
   },
   {
-    "t": 104.8,
+    "t": 97.7,
     "name": "Ask the dino"
   },
   {
-    "t": 121.4,
-    "name": "Java: Waddenislands"
-  },
-  {
-    "t": 136.2,
-    "name": "Walkthrough"
-  },
-  {
-    "t": 146.9,
+    "t": 113.1,
     "name": "End card"
   }
 ]
