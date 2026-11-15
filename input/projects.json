@@ -1,6 +1,24 @@
 [
-  {"id": "vault", "name": "vault", "repo": "samples/vault", "default": "main", "langs": ["go", "svelte"],
-   "about": "File server with secret codes per file"},
-  {"id": "wadden", "name": "Waddenislands", "repo": "samples/wadden", "default": "main", "langs": ["java"],
-   "about": "Ferry ticket terminal"}
+  {
+    "id": "wadden",
+    "name": "Waddenislands",
+    "repo": "samples/wadden",
+    "default": "main",
+    "langs": [
+      "java"
+    ],
+    "about": "Ferry ticket terminal"
+  },
+  {
+    "id": "vault-demo",
+    "name": "vault-demo",
+    "repo": "samples/vault-demo",
+    "default": "main",
+    "langs": [
+      "go",
+      "svelte"
+    ],
+    "about": "https://github.com/umarbektokyo/vault-demo",
+    "added": true
+  }
 ]

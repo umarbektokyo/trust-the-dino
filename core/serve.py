@@ -66,10 +66,13 @@ DECISIONS = os.path.join(STATE, "decisions.json")
 # admin token is set (public use: callers must send it).
 TOKEN = os.environ.get("TRUST_ADMIN_TOKEN", "")
 ALLOW = os.environ.get("TRUST_ALLOW_ADD") == "1" or bool(TOKEN)
+# Repositories anyone may connect (cloning runs no code; reviewing does, and stays behind ALLOW/TOKEN).
+DEMO_REPOS = [u.strip() for u in os.environ.get("TRUST_DEMO_REPOS", "").split(",") if u.strip()]
 
 
 def config(_=None):
-    return {"canAdd": ALLOW, "needsToken": bool(TOKEN)}
+    return {"canAdd": ALLOW or bool(DEMO_REPOS), "canReview": ALLOW, "needsToken": bool(TOKEN) and not DEMO_REPOS,
+            "demoRepos": DEMO_REPOS}
 
 
 def guarded(fn):
@@ -82,11 +85,25 @@ def guarded(fn):
     return run
 
 
-@guarded
 def add_project(body):
+    url = body["url"].strip()
+    if not any(projects.same_repo(url, d) for d in DEMO_REPOS):
+        return _add_any(body)
+    return {"job": jobs.submit(projects.add, url, (body.get("name") or "").strip() or None)}
+
+
+@guarded
+def _add_any(body):
     if not projects.URL.match(body["url"].strip()):
         raise ValueError("Use a public https git URL, e.g. https://github.com/owner/repo")
     return {"job": jobs.submit(projects.add, body["url"].strip(), (body.get("name") or "").strip() or None)}
+
+
+def reset(_):
+    """Demo reset: no decisions, default projects and saved tests. Open to everyone on purpose."""
+    if os.path.exists(DECISIONS):
+        os.remove(DECISIONS)
+    return projects.reset()
 
 
 @guarded
@@ -136,7 +153,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self):
-        routes = {"/api/chat": chat, "/api/decide": decide, "/api/projects": add_project, "/api/review": review_commit}
+        routes = {"/api/chat": chat, "/api/decide": decide, "/api/projects": add_project, "/api/review": review_commit,
+                  "/api/reset": reset}
         if self.path not in routes:
             return self.send_error(404)
         try:

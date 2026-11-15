@@ -1,0 +1,12 @@
+[
+  {
+    "id": "wadden",
+    "name": "Waddenislands",
+    "repo": "samples/wadden",
+    "default": "main",
+    "langs": [
+      "java"
+    ],
+    "about": "Ferry ticket terminal"
+  }
+]

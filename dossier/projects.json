@@ -1,15 +1,60 @@
 {
  "projects": [
   {
-   "id": "vault",
-   "name": "vault",
-   "repo": "samples/vault",
+   "id": "wadden",
+   "name": "Waddenislands",
+   "repo": "samples/wadden",
+   "default": "main",
+   "langs": [
+    "java"
+   ],
+   "about": "Ferry ticket terminal",
+   "ready": true,
+   "branches": [
+    {
+     "name": "main",
+     "base": null,
+     "commits": [
+      {
+       "hash": "8288959aa8a423ffb186c5ab0b174e54b727452d",
+       "author": "Wadden Team",
+       "date": "14 Nov 10:00",
+       "subject": "Waddenislands ferry ticket terminal",
+       "case": null
+      }
+     ]
+    },
+    {
+     "name": "agent/req-w3",
+     "base": "main",
+     "commits": [
+      {
+       "hash": "d60d3c8807f6466478c81fd39e59ad81d583a268",
+       "author": "wadden-agent",
+       "date": "15 Nov 09:30",
+       "subject": "REQ-W3: run Option 3 turnover in a thread",
+       "case": "w3",
+       "req": "REQ-W3",
+       "title": "Route turnover (Option 3) runs in a thread",
+       "units": 3,
+       "waiting": [],
+       "approver": "Sanne de Vries"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vault-demo",
+   "name": "vault-demo",
+   "repo": "samples/vault-demo",
    "default": "main",
    "langs": [
     "go",
     "svelte"
    ],
-   "about": "File server with secret codes per file",
+   "about": "https://github.com/umarbektokyo/vault-demo",
+   "added": true,
    "ready": true,
    "branches": [
     {
@@ -90,50 +135,6 @@
        "units": 2,
        "waiting": [],
        "approver": null
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "wadden",
-   "name": "Waddenislands",
-   "repo": "samples/wadden",
-   "default": "main",
-   "langs": [
-    "java"
-   ],
-   "about": "Ferry ticket terminal",
-   "ready": true,
-   "branches": [
-    {
-     "name": "main",
-     "base": null,
-     "commits": [
-      {
-       "hash": "8288959aa8a423ffb186c5ab0b174e54b727452d",
-       "author": "Wadden Team",
-       "date": "14 Nov 10:00",
-       "subject": "Waddenislands ferry ticket terminal",
-       "case": null
-      }
-     ]
-    },
-    {
-     "name": "agent/req-w3",
-     "base": "main",
-     "commits": [
-      {
-       "hash": "d60d3c8807f6466478c81fd39e59ad81d583a268",
-       "author": "wadden-agent",
-       "date": "15 Nov 09:30",
-       "subject": "REQ-W3: run Option 3 turnover in a thread",
-       "case": "w3",
-       "req": "REQ-W3",
-       "title": "Route turnover (Option 3) runs in a thread",
-       "units": 3,
-       "waiting": [],
-       "approver": "Sanne de Vries"
       }
      ]
     }

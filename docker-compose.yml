@@ -5,7 +5,9 @@ services:
   app:
     build: .
     ports: ["127.0.0.1:8300:8290"]   # 8290 stays free for the dev server
-    env_file: [.env]             # NVIDIA_API_KEY for the chat; TRUST_ADMIN_TOKEN only if adding projects
+    env_file: [.env]             # NVIDIA_API_KEY for the chat; TRUST_ADMIN_TOKEN only if reviewing new commits
+    environment:
+      TRUST_DEMO_REPOS: https://github.com/umarbektokyo/vault-demo   # anyone may connect this one
     volumes:
       - state:/state             # decisions.json
       - suite:/app/suite         # saved tests (merges promote into it)

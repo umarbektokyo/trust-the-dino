@@ -105,6 +105,7 @@ function renderHome() {
     ${wait ? `<section><div class="label">waiting for you</div>${wait}</section>` : ""}
     <section><div class="label sechead"><span>projects</span>${config.canAdd && !add.open ? `<button data-add>add repository</button>` : ""}</div>
       ${add.open ? addForm() : ""}${projs}</section>
+    <button class="reset" data-reset title="Remove connected repositories, decisions and merges">reset demo</button>
   </div>`;
 }
 
@@ -115,7 +116,7 @@ function addForm() {
   const jl = add.error ? `<div class="jobline err">${esc(add.error)}</div>`
     : add.busy ? `<div class="jobline" data-jobline="add">${esc(add.line || "queued")}</div>` : "";
   return `<form class="addrepo" ${add.busy ? "inert" : ""}>
-      <input name="url" type="url" placeholder="https://github.com/owner/repo.git" required value="${esc(add.url || "")}">
+      <input name="url" type="url" placeholder="https://github.com/owner/repo.git" required value="${esc(add.url || config.demoRepos?.[0] || "")}">
       <input name="name" placeholder="name (optional)" value="${esc(add.name || "")}">
       ${config.needsToken ? `<input name="token" type="password" placeholder="token" autocomplete="off">` : ""}
       <button class="act main">Add</button><button type="button" class="act" data-add-cancel>Cancel</button>
@@ -211,7 +212,7 @@ function renderBranch() {
 
 const reviews = {};   // hash -> { busy, line, error, askToken }
 function reviewAction(p, b, c) {
-  if (!config.canAdd) return "";
+  if (!(config.canReview ?? config.canAdd)) return "";
   if (!p.langs.length) return `<span class="done">no adapter for this language yet</span>`;
   const r = reviews[c.hash];
   if (r?.busy) return `<span class="done" data-jobline="${esc(c.hash)}">${esc(r.line || "queued")}</span>`;
@@ -268,9 +269,15 @@ document.addEventListener("click", async (ev) => {
   await decide({ case: w.c.case, unit: null, decision: "merged", by: w.c.approver });
   render();
 }, true);
-document.addEventListener("click", (ev) => {
+document.addEventListener("click", async (ev) => {
   const t = ev.target;
   if (t.closest?.("[data-add]")) { Object.assign(add, { open: true, error: "" }); renderHome(); document.querySelector(".addrepo input")?.focus(); }
+  if (t.closest?.("[data-reset]") && confirm("Reset the demo? Connected repositories, decisions and merges are removed.")) {
+    await fetch("/api/reset", { method: "POST", body: "{}" });
+    await Promise.all([loadProjects(), loadDecisions()]);
+    location.hash = "#/";
+    renderHome();
+  }
   if (t.closest?.("[data-add-cancel]")) { Object.assign(add, { open: false, error: "" }); renderHome(); }
   const rv = t.closest?.("[data-review]");
   if (rv) startReview(rv.dataset.review, token.get());

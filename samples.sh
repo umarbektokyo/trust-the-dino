@@ -1,7 +1,12 @@
 #!/bin/sh
-# Rebuild samples/vault: upstream main + the agent branch for REQ-V7.
+# Rebuild the sample repositories. ./samples.sh [vault] [wadden]   (default: both)
 set -e
 cd "$(dirname "$0")"
+want() { [ $# -eq 0 ] || case " $ARGS " in *" $1 "*) return 0;; *) return 1;; esac; }
+ARGS="$*"
+
+if [ -z "$ARGS" ] || want vault; then
+# Rebuild samples/vault: upstream main + the agent branches for REQ-V7 (and its fix) and REQ-V8.
 [ -d samples/vault ] || git clone -q https://github.com/umarbektokyo/vault samples/vault
 cd samples/vault
 git checkout -q 18ffa2d -B main
@@ -15,9 +20,12 @@ git checkout -q -b agent/req-v8-preview-size
 git -c user.name=vault-agent -c user.email=agent@example.invalid am -q --committer-date-is-author-date ../../input/v8/agent.patch
 git checkout -q main
 echo "samples/vault: main + agent/req-v7-glob + agent/req-v8-preview-size"
+cd ../..
+fi
+
+if [ -z "$ARGS" ] || want wadden; then
 
 # Rebuild samples/wadden: Waddenislands (human-written) on main + the agent branch for REQ-W3.
-cd ../..  # back to trust/
 rm -rf samples/wadden
 mkdir -p samples/wadden
 W=input/w3/source  # the human-written code, vendored
@@ -33,3 +41,4 @@ export GIT_AUTHOR_DATE="2026-11-15T09:30:00Z" GIT_COMMITTER_DATE="2026-11-15T09:
 g add -A && g -c user.name=wadden-agent -c user.email=agent@example.invalid commit -qm "REQ-W3: run Option 3 turnover in a thread"
 g checkout -q main
 echo "samples/wadden: main + agent/req-w3"
+fi

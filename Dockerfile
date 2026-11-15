@@ -16,6 +16,6 @@ ENV PATH=/usr/local/go/bin:/opt/java/openjdk/bin:$PATH \
     PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY . .
-RUN cd adapters/go && go build -o /dev/null . && mkdir -p /state
+RUN cd adapters/go && go build -o /dev/null . && cd /app && sh samples.sh wadden && mkdir -p /state
 EXPOSE 8290
 CMD ["python3", "-m", "core.serve", "8290"]

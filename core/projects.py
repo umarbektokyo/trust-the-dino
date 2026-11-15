@@ -6,6 +6,7 @@ server must keep both behind an admin token (see core/serve.py)."""
 import json
 import os
 import re
+import shutil
 import subprocess
 
 from core import catalog, dossier
@@ -31,10 +32,19 @@ def detect_langs(repo):
     return [lang for lang, yes in found.items() if yes]
 
 
+def same_repo(a, b):
+    norm = lambda u: u.lower().rstrip("/").removesuffix(".git")
+    return norm(a) == norm(b)
+
+
 def add(url, name=None, log=print):
     if not URL.match(url):
         raise ValueError("Use a public https git URL, e.g. https://github.com/owner/repo")
     projects = json.load(open(LIST))
+    known = next((p for p in projects if same_repo(p.get("about", ""), url)), None)
+    if known:  # connecting the same repository twice opens the one we have
+        log(f"already connected as {known['id']}")
+        return {"project": known["id"]}
     pid = base = slug(name or url.rstrip("/").removesuffix(".git").split("/")[-1])
     n = 2
     while any(p["id"] == pid for p in projects):
@@ -80,3 +90,18 @@ def review(project_id, commit, log=print):
     log(f"reviewing {head[:7]} against {base[:7]}")
     dossier.write(case_id, log=log)
     return {"case": case_id}
+
+
+def reset(log=print):
+    """Back to the demo's starting point: the default project list and saved tests, no connected repos."""
+    default = json.load(open(os.path.join(ROOT, "input", "projects.default.json")))
+    keep = {p["repo"] for p in default}
+    for p in json.load(open(LIST)):
+        if p.get("added") and p["repo"] not in keep:
+            shutil.rmtree(os.path.join(ROOT, p["repo"]), ignore_errors=True)
+    json.dump(default, open(LIST, "w"), indent=2)
+    suite_default = os.path.join(ROOT, "input", "suite.default")
+    for f in os.listdir(suite_default):
+        shutil.copy(os.path.join(suite_default, f), os.path.join(ROOT, "suite", f))
+    catalog.write()
+    return {"ok": True}

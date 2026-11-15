@@ -246,3 +246,8 @@ pre.src { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 4
 @keyframes blink { 50% { opacity: .2; } }
 .tokenform { display: flex; gap: 6px; }
 .tokenform input { width: 160px; }
+
+/* reset demo: quiet, bottom of home */
+.home-in .reset { display: block; margin: 48px 0 0; font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase;
+                  color: var(--mute); cursor: pointer; }
+.home-in .reset:hover { color: var(--ink); text-decoration: underline; }
