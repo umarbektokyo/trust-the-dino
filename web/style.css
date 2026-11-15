@@ -251,3 +251,4 @@ pre.src { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 4
 .home-in .reset { display: block; margin: 48px 0 0; font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase;
                   color: var(--mute); cursor: pointer; }
 .home-in .reset:hover { color: var(--ink); text-decoration: underline; }
+.home-in .reset.armed { color: var(--ink); text-decoration: underline; }

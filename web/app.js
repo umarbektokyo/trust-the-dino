@@ -272,11 +272,17 @@ document.addEventListener("click", async (ev) => {
 document.addEventListener("click", async (ev) => {
   const t = ev.target;
   if (t.closest?.("[data-add]")) { Object.assign(add, { open: true, error: "" }); renderHome(); document.querySelector(".addrepo input")?.focus(); }
-  if (t.closest?.("[data-reset]") && confirm("Reset the demo? Connected repositories, decisions and merges are removed.")) {
+  const rs = t.closest?.("[data-reset]");
+  if (rs && !rs.classList.contains("armed")) {
+    // no native confirm(): some embedded browsers have none or block it; a second click confirms
+    rs.classList.add("armed"); rs.textContent = "click again to reset";
+    setTimeout(() => { if (rs.isConnected) { rs.classList.remove("armed"); rs.textContent = "reset demo"; } }, 4000);
+  } else if (rs) {
+    rs.disabled = true; rs.textContent = "resetting";
     await fetch("/api/reset", { method: "POST", body: "{}" });
     await Promise.all([loadProjects(), loadDecisions()]);
-    location.hash = "#/";
-    renderHome();
+    Object.assign(add, { open: false, busy: false, error: "" });
+    if (location.hash.replace(/^#\/?/, "")) location.hash = "#/"; else await route();
   }
   if (t.closest?.("[data-add-cancel]")) { Object.assign(add, { open: false, error: "" }); renderHome(); }
   const rv = t.closest?.("[data-review]");
