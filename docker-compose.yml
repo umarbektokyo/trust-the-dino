@@ -1,10 +1,10 @@
-# docker compose up -d        app on http://localhost:8290
+# docker compose up -d        app on http://localhost:8300
 # With a Cloudflare tunnel token in .env (TUNNEL_TOKEN=...), `--profile tunnel` also publishes it
 # (point the tunnel's public hostname, e.g. dino.umarbek.dev, at http://app:8290).
 services:
   app:
     build: .
-    ports: ["127.0.0.1:8290:8290"]
+    ports: ["127.0.0.1:8300:8290"]   # 8290 stays free for the dev server
     env_file: [.env]             # NVIDIA_API_KEY for the chat; TRUST_ADMIN_TOKEN only if adding projects
     volumes:
       - state:/state             # decisions.json

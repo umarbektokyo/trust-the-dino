@@ -4,6 +4,8 @@ A merge IDE for agent-written code. It reads your codebase as a graph of functio
 where data goes, which layer each one is in) and reviews a commit against it, so a human only looks
 at what they have to decide. Built for Junction 2026 (Tieto: Earned Trust in AI Code).
 
+![A review: the changed function with its callers, the moved check, who must decide, and the tests](docs/review.png)
+
 ## What it does with a commit
 
 - **Graph diff.** Every function is a node. A change is a set of changed nodes, each shown with the
@@ -18,6 +20,19 @@ at what they have to decide. Built for Junction 2026 (Tieto: Earned Trust in AI 
 - **Visual changes** are shown as before/after screenshots of the real app at both commits.
 - **The dino** walks along the bottom. Click it to ask about the open commit; it answers only from
   that commit's review and never makes the decision.
+
+## Screens
+
+| | |
+|---|---|
+| ![Home: what waits on you, and your projects](docs/home.png) | ![Before and after: the real app at both commits](docs/before-after.png) |
+| **Home.** What waits on whom, and your projects. | **Visual changes.** The real app at both commits: typing `*` now lists `.vault-secrets.json`. |
+| ![The fix commit: tests saved from the first commit now pass](docs/fix-commit.png) | ![Java: tests for a new method in Waddenislands](docs/java.png) |
+| **The fix.** The three tests that caught the leak were saved, and pass on the agent's fix. | **Java.** Same pipeline on Waddenislands: JUnit tests with JaCoCo coverage. |
+
+The first visit starts a short walkthrough of every part of the screen:
+
+![Walkthrough step explaining the test boxes](docs/walkthrough.png)
 
 ## Run
 
