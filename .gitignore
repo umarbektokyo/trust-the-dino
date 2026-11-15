@@ -8,3 +8,4 @@ decisions.json
 __pycache__/
 video/raw/
 video/*.webm
+video/promo/clips/

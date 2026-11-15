@@ -1,0 +1,447 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>trust the dino · promo</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+<script src="diff.js"></script>
+</head><body><canvas id="c" width="1920" height="1080"></canvas>
+<script type="module">
+// The promo film. Every frame is a pure function of t (seconds): await window.render(t).
+import { frame } from "../../web/creature.js";
+
+const W = 1920, H = 1080;
+const cv = document.getElementById("c"), g = cv.getContext("2d");
+const C = { paper: "#f3f2ee", paper2: "#fbfbf8", ink: "#141414", mute: "#8a8981", line: "#d6d5ce", hot: "#ff5a1f",
+  hotSoft: "#ffe3d6", add: "#e3ecd8", del: "#f6e2da", sub: "#4a4a44", plate: "#9a998f", eye: "#fbfbf8",
+  night: "#121211", nightInk: "#eceae3" };
+const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif', MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
+const DUSK = ["#f5a885", "#b37385", "#545480", "#292b47"];
+const DAY = ["#fbe9d2", "#e9e7df", "#d5dde2", "#bfcdd8"];
+const NIGHT = ["#3b3552", "#262840", "#1a1b2e", "#111220"];
+
+/* ---------- helpers ---------- */
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const ease = (k) => { k = clamp(k); return k < .5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2; };
+const out = (k) => 1 - (1 - clamp(k)) ** 3;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const bayer = (x, y) => { const b2 = (a, b) => ((a % 2) / 2 + ((b % 2) * (b % 2)) * .75) % 1;
+  return b2(Math.floor(x / 2) & 3, Math.floor(y / 2) & 3) * .25 + b2(x & 1, y & 1); };
+const hash = (x, y) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); };
+
+function text(s, x, y, { size = 64, weight = 700, color = C.ink, font = SANS, align = "left", alpha = 1, ls = 0, base = "alphabetic" } = {}) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha *= clamp(alpha); g.fillStyle = color; g.textAlign = align; g.textBaseline = base;
+  g.font = `${weight} ${size}px ${font}`; if (ls) g.letterSpacing = ls + "px"; g.fillText(s, x, y); g.restore();
+}
+// headline that rises in from a mask, Apple-style
+function head(s, x, y, t0, t, o = {}) {
+  const k = out((t - t0) / .55);
+  if (k <= 0) return;
+  const size = o.size || 92;
+  g.save(); g.beginPath(); g.rect(x - 20 - (o.align === "center" ? 1200 : 0), y - size * 1.05, 2600, size * 1.35); g.clip();
+  text(s, x, y + (1 - k) * size * 1.1, { size, ls: -size * .025, ...o, alpha: (o.alpha ?? 1) * k });
+  g.restore();
+}
+function label(s, x, y, o = {}) { text(s.toUpperCase(), x, y, { size: 18, weight: 500, font: MONO, color: C.mute, ls: 3, ...o }); }
+function fill(c) { g.fillStyle = c; g.fillRect(0, 0, W, H); }
+function rrect(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+
+const imgs = new Map();
+function img(src) {
+  let e = imgs.get(src);
+  if (!e) { e = new Image(); e.src = src; e.ready = e.decode().catch(() => {}); imgs.set(src, e); if (imgs.size > 400) imgs.delete(imgs.keys().next().value); }
+  return e;
+}
+const need = [];
+function pic(src) { const e = img(src); need.push(e.ready); return e; }
+
+/* ---------- pixel art ---------- */
+// dithered sky: bands from horizon (0) to top (3); mix blends two palettes per cell through the dither
+function sky(x0, y0, w, h, cell, t, { from = DUSK, to = null, mix = 0, horizon = 0, stars = 0, dome = null } = {}) {
+  const cw = Math.ceil(w / cell), ch = Math.ceil(h / cell);
+  for (let cy = 0; cy < ch; cy++) for (let cx = 0; cx < cw; cx++) {
+    const up = (ch - 1 - cy) / (ch - 1);
+    const b = bayer(cx, cy);
+    if (dome) { const m = 1 - Math.hypot((cx - dome.cx) / dome.rx, (ch - 1 - cy) / dome.ry); if (m <= 0 || Math.min(1, m / .3) * dome.k <= b) continue; }
+    const hh = clamp(up - horizon);
+    const band = clamp(Math.floor(hh * 3.4 + (b - .5) * .9 + .5), 0, 3);
+    let col = (to && mix > b) ? to[band] : from[band];
+    if (stars > 0 && up > .3 && hash(cx, cy) > 1 - .05 * stars) {
+      const tw = .5 + .5 * Math.sin(t * (1.5 + 3 * hash(cx + 7, cy)) + hash(cx, cy) * 40);
+      if (tw > .35) col = C.eye;
+    }
+    g.fillStyle = col; g.fillRect(x0 + cx * cell, y0 + cy * cell, cell, cell);
+  }
+}
+function cloud(x, y, cell, seed, color = "#ffffff", alpha = .8) {
+  g.save(); g.globalAlpha = alpha; g.fillStyle = color;
+  const w = 10 + Math.floor(hash(seed, 1) * 10), h = 4;
+  for (let cy = 0; cy < h; cy++) for (let cx = 0; cx < w; cx++) {
+    const k = 1 - Math.hypot((cx - w / 2) / (w / 2), (cy - h + .5) / (h - .3 + hash(cx, seed) * 1.5));
+    if (k > 0) g.fillRect(Math.round(x / cell) * cell + cx * cell, y + cy * cell, cell, cell);
+  }
+  g.restore();
+}
+function rain(t, alpha = .14, cell = 6) { // slow faint fall of pixel diff lines
+  g.save(); g.globalAlpha = alpha;
+  for (let i = 0; i < 70; i++) {
+    const x = Math.floor(hash(i, 3) * W / cell) * cell, sp = 20 + hash(i, 9) * 40, len = 3 + Math.floor(hash(i, 5) * 9);
+    const y = ((hash(i, 7) * (H + 200) + t * sp) % (H + 200)) - 100;
+    g.fillStyle = [C.hot, "#6a9a5a", "#c0503a", C.mute, C.mute][i % 5];
+    g.fillRect(x, Math.floor(y / cell) * cell, len * cell, cell);
+  }
+  g.restore();
+}
+const DFILL = (signal, dark) => ({ o: dark ? C.nightInk : C.ink, k: dark ? C.nightInk : C.ink, p: C.plate, g: C.plate,
+  e: dark ? C.ink : C.eye, w: dark ? C.ink : C.eye, "!": C.hot });
+// draw a dino grid with its ground row at (x, yGround), x = left edge
+function dino(grid, x, yGround, cell, { dark = false, drop = "" } = {}) {
+  const f = DFILL(false, dark), h = grid.length;
+  grid.forEach((row, y) => row.forEach((c, cx) => {
+    if (!f[c] || drop.includes(c)) return;
+    g.fillStyle = f[c]; g.fillRect(Math.round(x + cx * cell), Math.round(yGround - (h - y) * cell), cell, cell);
+  }));
+}
+const dinoW = (grid, cell) => grid[0].length * cell;
+
+/* ---------- scene timing (100 BPM: one beat = 0.6 s) ---------- */
+export const SCENES = [
+  ["type", 0, 3], ["eras", 3, 15], ["three", 15, 19.2], ["montage", 19.2, 24], ["graph", 24, 31.2],
+  ["run", 31.2, 41.4], ["catch", 41.4, 49.2], ["night", 49.2, 57], ["numbers", 57, 63], ["end", 63, 70.2]];
+window.SCENES = SCENES;
+const DUR = 70.2;
+
+/* 1. a cursor types "code review." */
+function sType(t) {
+  fill("#000");
+  const s = "code review.", n = Math.floor(clamp((t - .5) / 1.4) * s.length);
+  g.font = `500 64px ${MONO}`;
+  const full = g.measureText(s).width, x = W / 2 - full / 2;
+  text(s.slice(0, n), x, H / 2 + 22, { size: 64, weight: 500, font: MONO, color: "#f3f2ee" });
+  const cx = x + g.measureText(s.slice(0, n)).width + 6;
+  if (n < s.length || Math.floor(t * 2.5) % 2 === 0) { g.fillStyle = C.hot; g.fillRect(cx, H / 2 - 26, 32, 58); }
+}
+
+/* 2. how review used to look */
+const D = window.DIFF.filter((l) => l.length);
+const BOT = ["Consider adding error handling here.", "Nit: this variable name could be clearer.", "This function is getting long; consider splitting it.",
+  "Potential edge case: what if the input is empty?", "Suggestion: extract this into a helper.", "Consider adding a test for this branch.",
+  "This could be simplified with an early return.", "Nit: trailing whitespace.", "Are we sure this is thread-safe?", "Consider documenting this behaviour.",
+  "Minor: prefer a constant over a magic string.", "Looks good overall, a few suggestions below."];
+function counter(t) {
+  const k = clamp((t - 3) / 12) ** 2.2, n = Math.round(k * 800);
+  g.save(); g.fillStyle = C.ink; g.fillRect(W - 420, H - 170, 360, 110);
+  label("lines to review", W - 395, H - 130, { color: C.mute, size: 16 });
+  text(String(n).padStart(4, "0"), W - 395, H - 78, { size: 46, weight: 500, font: MONO, color: C.paper });
+  g.restore();
+}
+function terminal(t) { // era A: a scrolling unified diff in a terminal
+  fill(C.paper);
+  const k = out((t - 3) / .5);
+  const x = 140, y = 230 + (1 - k) * 60, w = 1640, h = 760;
+  g.save(); g.globalAlpha = k; rrect(x, y, w, h, 14); g.fillStyle = "#161615"; g.fill(); g.clip();
+  for (const [i, c] of ["#3a3a37", "#3a3a37", "#3a3a37"].entries()) { g.fillStyle = c; g.beginPath(); g.arc(x + 30 + i * 24, y + 26, 7, 0, 7); g.fill(); }
+  text("$ diff -u main agent/req-v7-glob", x + 110, y + 34, { size: 20, weight: 500, font: MONO, color: "#8a8981" });
+  const lh = 30, sc = (t - 3) * (40 + (t - 3) * 30);
+  const first = Math.floor(sc / lh);
+  for (let i = 0; i < 26; i++) {
+    const li = first + i, l = D[li % D.length], yy = y + 80 + i * lh - (sc % lh);
+    const col = l.startsWith("+") ? "#8fc27a" : l.startsWith("-") ? "#e0735c" : l.startsWith("@@") ? "#8fb0e0" : "#a3a29a";
+    text(l.slice(0, 110), x + 34, yy + 20, { size: 21, weight: 400, font: MONO, color: col });
+  }
+  g.restore();
+  head("Reviews got longer.", 140, 160, 3.2, t);
+}
+function webDiff(t) { // era B: a generic web diff view, cards scrolling and zooming out
+  fill(C.paper);
+  const z = lerp(1, .55, ease((t - 7) / 4)), sc = (t - 7) * 420;
+  g.save(); g.translate(W / 2, H / 2 + 60); g.scale(z, z); g.translate(-W / 2, -H / 2);
+  for (let col = -2; col <= 2; col++) {
+    const cx = W / 2 - 560 + col * 1180;
+    for (let card = 0; card < 7; card++) {
+      const cy = -300 + card * 640 - sc * (1 + Math.abs(col) * .15) % 640 - (col % 2 ? 200 : 0);
+      g.fillStyle = C.paper2; rrect(cx, cy, 1120, 600, 10); g.fill(); g.strokeStyle = C.line; g.lineWidth = 2; g.stroke();
+      g.fillStyle = "#ebeae4"; g.fillRect(cx + 1, cy + 1, 1118, 50);
+      text(["backend/main.go", "backend/main_test.go", "frontend/src/FileBrowser.svelte"][(card + col + 9) % 3], cx + 24, cy + 33, { size: 18, weight: 600, font: MONO, color: C.ink });
+      text("+17  −2", cx + 1000, cy + 33, { size: 18, weight: 500, font: MONO, color: C.mute });
+      for (let r = 0; r < 18; r++) {
+        const l = D[(card * 11 + r + col * 5 + 50) % D.length], yy = cy + 64 + r * 29;
+        const add = l.startsWith("+"), del = l.startsWith("-");
+        if (add || del) { g.fillStyle = add ? C.add : C.del; g.fillRect(cx + 1, yy, 1118, 29); }
+        text(String(760 + r), cx + 18, yy + 20, { size: 15, weight: 400, font: MONO, color: C.mute });
+        text(l.slice(0, 80), cx + 80, yy + 20, { size: 17, weight: 400, font: MONO, color: C.sub });
+      }
+    }
+  }
+  g.restore();
+  g.fillStyle = C.paper; g.fillRect(0, 0, W, 210);
+  head("Reviews got longer.", 140, 160, 3.2, t);
+}
+function avatar(x, y, s) { // generic pixel bot face
+  const P = ["11111", "10101", "11111", "10001", "11111"];
+  g.fillStyle = "#c9c8c0"; g.fillRect(x, y, s * 5, s * 5);
+  g.fillStyle = C.mute; P.forEach((r, j) => [...r].forEach((c, i) => { if (c === "0") g.fillRect(x + i * s, y + j * s, s, s); }));
+}
+function bots(t) { // era C: a wall of generic automated review comments
+  fill(C.paper);
+  const k = (t - 11) / 4, z = lerp(.95, .42, ease(k)), sc = (t - 11) * (300 + k * 900);
+  g.save(); g.translate(W / 2, H / 2 + 80); g.scale(z, z); g.translate(-W / 2, -H / 2);
+  for (let col = -4; col <= 5; col++) for (let r = 0; r < 14; r++) {
+    const cx = W / 2 - 330 + col * 640, cy = ((r * 230 - sc * (1 + (col & 1) * .3)) % 3220 + 3220) % 3220 - 1100;
+    g.fillStyle = C.paper2; rrect(cx, cy, 600, 200, 10); g.fill(); g.strokeStyle = C.line; g.lineWidth = 2; g.stroke();
+    avatar(cx + 22, cy + 22, 8);
+    text("review-bot", cx + 82, cy + 42, { size: 20, weight: 700, color: C.ink });
+    text("bot · just now", cx + 210, cy + 42, { size: 16, weight: 500, font: MONO, color: C.mute });
+    const s = BOT[(r * 7 + col * 3 + 40) % BOT.length];
+    text(s.length > 46 ? s.slice(0, 46) + "…" : s, cx + 24, cy + 108, { size: 22, weight: 400, color: C.sub });
+    g.fillStyle = C.line; g.fillRect(cx + 24, cy + 132, 420, 12); g.fillRect(cx + 24, cy + 154, 300, 12);
+  }
+  g.restore();
+  g.fillStyle = C.paper; g.fillRect(0, 0, W, 210);
+  head("Then agents started writing the code.", 140, 160, 11.1, t);
+}
+function sEras(t) {
+  if (t < 7) terminal(t); else if (t < 11) webDiff(t); else bots(t);
+  counter(t);
+}
+
+/* 3. collapse into three orange lines; the dino walks in */
+const THREE = [["215", 'filepath.Join(absContentRoot, ".vault-secrets.json"),'], ["216", "cfg.HMACSecret,"], ["221", 'mux.HandleFunc("/api/browse", handleBrowse(absContentRoot, secrets))']];
+function sThree(t) {
+  if (t < 15.6) { // the wall falls into a point
+    const k = ease((t - 15) / .6);
+    g.save(); bots(15); g.restore();
+    g.save(); g.globalAlpha = k; fill(C.paper); g.restore();
+    const r = lerp(900, 0, k); g.fillStyle = C.hot; g.globalAlpha = k; g.fillRect(W / 2 - r, H / 2 - 3, r * 2, 6); g.globalAlpha = 1;
+    return;
+  }
+  fill(C.paper);
+  head("Read 3 lines, not 800.", W / 2, 250, 16.4, t, { align: "center", size: 104 });
+  const x = 220, y0 = 390;
+  THREE.forEach(([n, s], i) => {
+    const k = out((t - 15.6 - i * .15) / .5), y = y0 + i * 92 + (i === 2 ? 40 : 0);
+    g.save(); g.globalAlpha = k;
+    g.fillStyle = C.hotSoft; g.fillRect(x, y, lerp(0, 1480, k), 70);
+    g.fillStyle = C.hot; g.fillRect(x, y, 8, 70);
+    text("newMux:" + n, x + 34, y + 45, { size: 24, weight: 500, font: MONO, color: C.hot });
+    text(s, x + 230, y + 45, { size: 26, weight: 500, font: MONO, color: C.ink, alpha: k });
+    g.restore();
+    if (i === 1) text("⋯", x + 34, y + 125, { size: 26, font: MONO, color: C.mute, alpha: k });
+  });
+  label("REQ-V7 · glob filter · routed to Aino Virtanen, Team Security", x, 760, { alpha: prog(t, 16.6, 17.2), size: 18 });
+  // ground + walking dino with its spines lit: something waits on a human
+  g.fillStyle = C.ink; g.fillRect(0, 980, W, 4);
+  const cell = 8, wx = lerp(-300, 1300, out((t - 15.8) / 2.4));
+  const walking = t < 18;
+  const gr = frame({ pose: walking ? "stand" : "wave", legs: Math.floor(t * 8) % 2 ? "stepA" : "stepB", t: Math.floor(t * 4), signal: true });
+  dino(gr, wx, 980, cell);
+}
+
+/* 4. dino montage */
+const POSES = [["walk", "stand", 0], ["type", "type", 0], ["read", "read", .15], ["coffee", "coffee", 0], ["stars", "stars", .7], ["sleep", "sleep", 1], ["wave", "wave", .2], ["sit", "sit", 0]];
+function sMontage(t) {
+  const lt = t - 19.2, i = clamp(Math.floor(lt / .6), 0, 7), [name, pose, night] = POSES[i];
+  const beat = lt - i * .6, pulse = Math.exp(-beat * 6);
+  sky(0, 0, W, 900, 24, t, { from: DUSK, to: NIGHT, mix: night, horizon: -.1 + .05 * i % .2 - pulse * .06, stars: night > .5 ? 2 : .6 });
+  g.fillStyle = C.ink; g.fillRect(0, 900, W, H - 900);
+  const cell = 26, gr = frame({ pose, t: Math.floor(lt * 8), legs: Math.floor(lt * 8) % 2 ? "stepA" : "stepB" });
+  dino(gr, W / 2 - dinoW(gr, cell) / 2, 900, cell);
+  label(String(i + 1).padStart(2, "0") + " / 08", 140, 1000, { color: C.mute });
+  text(name, 140, 1048, { size: 34, weight: 700, color: C.paper });
+  label("the dino", W - 140, 1000, { align: "right", color: C.mute });
+  text("lives at the bottom of the app", W - 140, 1048, { size: 26, weight: 400, color: C.paper, align: "right" });
+}
+
+/* 5. functions, not files */
+const NODES = (() => {
+  const groups = [["backend/main.go", 560, 600, ["main", "newMux", "handleBrowse", "handleFiles", "handleAuth", "handleLogin", "handleLogout", "handleUpload", "handleMkdir", "handleRename", "handleMove", "handleDelete", "handleSecret", "handleUnlock", "requireAuth", "isAuthenticated", "signValue", "writeJSON", "fileSize", "sortEntries"]],
+    ["backend/secrets.go", 1180, 360, ["newSecretsStore", "getUnlockedPaths", "setUnlockedCookie"]],
+    ["backend/main_test.go", 1400, 720, ["TestBrowseRoot", "TestBrowseHiddenFilesExcluded", "TestBrowseSortOrder", "TestBrowsePathTraversal", "TestLoginSuccess", "TestUploadFile", "TestSetAndVerifySecret"]],
+    ["frontend/src", 1500, 300, ["FileBrowser.svelte", "Preview.svelte", "App.svelte"]]];
+  const ns = [];
+  groups.forEach(([file, gx, gy, names], gi) => names.forEach((n, i) => {
+    const a = i * 2.4 + gi, r = 60 + Math.sqrt(i) * 95;
+    ns.push({ n, file, x: gx + Math.cos(a) * r, y: gy + Math.sin(a) * r * .72, test: n.startsWith("Test"), hot: n === "handleBrowse" || n === "newMux", i: ns.length });
+  }));
+  const by = Object.fromEntries(ns.map((x) => [x.n, x]));
+  const E = [["main", "newMux"], ["newMux", "newSecretsStore"], ["newMux", "requireAuth"], ...["handleBrowse", "handleFiles", "handleAuth", "handleLogin", "handleLogout", "handleUpload", "handleMkdir", "handleRename", "handleMove", "handleDelete", "handleSecret", "handleUnlock"].map((h) => ["newMux", h]),
+    ["handleBrowse", "writeJSON"], ["handleBrowse", "sortEntries"], ["handleBrowse", "getUnlockedPaths"], ["handleBrowse", "fileSize"], ["handleUnlock", "setUnlockedCookie"], ["requireAuth", "isAuthenticated"], ["isAuthenticated", "signValue"],
+    ["TestBrowseRoot", "handleBrowse"], ["TestBrowseHiddenFilesExcluded", "handleBrowse"], ["TestBrowseSortOrder", "handleBrowse"], ["TestBrowsePathTraversal", "handleBrowse"], ["TestLoginSuccess", "handleLogin"], ["TestUploadFile", "handleUpload"], ["TestSetAndVerifySecret", "handleSecret"],
+    ["FileBrowser.svelte", "handleBrowse"], ["Preview.svelte", "handleFiles"], ["App.svelte", "FileBrowser.svelte"], ["App.svelte", "handleAuth"]];
+  return { ns, E: E.map(([a, b]) => [by[a], by[b]]).filter(([a, b]) => a && b) };
+})();
+function pline(x0, y0, x1, y1, s) { // a stepped pixel line
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) / s;
+  for (let i = 0; i <= n; i++) g.fillRect(Math.round(lerp(x0, x1, i / n) / s) * s, Math.round(lerp(y0, y1, i / n) / s) * s, s, s);
+}
+function sGraph(t) {
+  fill(C.paper); rain(t, .1);
+  const lt = t - 24, hot = prog(t, 27, 27.4), push = ease((t - 27.6) / 3.4);
+  const focus = NODES.ns.find((n) => n.n === "handleBrowse");
+  const z = lerp(.95, 2.1, push), fx = lerp(W / 2, focus.x, push), fy = lerp(H / 2 + 40, focus.y, push);
+  g.save(); g.translate(W / 2, H / 2 + 60); g.scale(z, z); g.translate(-fx, -fy);
+  for (const [a, b] of NODES.E) {
+    const k = prog(lt, .6 + a.i * .04, 1.4 + a.i * .04); if (!k) continue;
+    const h = hot && a.hot && b.hot;
+    g.fillStyle = h ? C.hot : C.line; g.globalAlpha = h ? .5 + .5 * hot : 1;
+    pline(a.x, a.y, lerp(a.x, b.x, k), lerp(a.y, b.y, k), 4); g.globalAlpha = 1;
+  }
+  for (const n of NODES.ns) {
+    const k = out((lt - .2 - n.i * .045) / .35); if (k <= 0) continue;
+    const s = (n.hot ? 26 : 18) * k, col = n.hot && hot ? C.hot : n.test ? C.mute : C.ink;
+    if (n.hot && hot) { const r = 26 + ((t - 27) * 50) % 60; g.strokeStyle = C.hot; g.globalAlpha = 1 - ((t - 27) * 50 % 60) / 60; g.lineWidth = 3; g.strokeRect(n.x - r, n.y - r, r * 2, r * 2); g.globalAlpha = 1; }
+    g.fillStyle = col; g.fillRect(n.x - s / 2, n.y - s / 2, s, s);
+    text(n.n, n.x + 18, n.y + 6, { size: 15, weight: n.hot ? 600 : 400, font: MONO, color: n.hot && hot ? C.hot : C.sub, alpha: k });
+  }
+  g.restore();
+  g.fillStyle = C.paper; g.globalAlpha = .9; g.fillRect(0, 0, W, 220); g.globalAlpha = 1;
+  head("Functions, not files.", 140, 160, 24.2, t);
+  label("vault · go + svelte · every function is a node", 140, 205, { alpha: prog(t, 24.8, 25.3) });
+  label("REQ-V7 changed 2 functions", W - 140, 205, { align: "right", color: C.hot, alpha: hot });
+}
+
+/* 6. the test run, captured from the app */
+function sRun(t) {
+  fill(C.paper);
+  const lt = t - 31.2, f = clamp(Math.round((1.0 + lt) * 30) + 1, 1, 511);
+  const im = pic(`clips/v9/${String(f).padStart(4, "0")}.jpg`);
+  // camera: whole app, then a slow push onto the test run panel
+  const k = ease((lt - 1.2) / 3.2), k2 = ease((lt - 6.5) / 2.5);
+  const z0 = 1920 * .82 / 1600, z1 = 2.05, z2 = 1.75;
+  const z = lerp(lerp(z0, z1, k), z2, k2);
+  const cx = lerp(800, 1430, k), cy = lerp(450, lerp(250, 320, k2), k);
+  g.save(); g.translate(W / 2, H / 2 + lerp(70, 0, k)); g.scale(z, z); g.translate(-cx, -cy);
+  g.shadowColor = "rgba(20,20,20,.18)"; g.shadowBlur = 40 / z; g.shadowOffsetY = 10 / z;
+  rrect(0, 0, 1600, 900, 12 / z); g.fillStyle = C.paper2; g.fill(); g.shadowColor = "transparent";
+  g.save(); rrect(0, 0, 1600, 900, 12 / z); g.clip(); if (im.complete && im.naturalWidth) g.drawImage(im, 0, 0, 1600, 900); g.restore();
+  g.restore();
+  // caption band
+  const a = prog(lt, .3, .8) * (1 - prog(lt, 9.6, 10.2));
+  g.save(); g.globalAlpha = a; g.fillStyle = C.ink; rrect(W / 2 - 560, H - 150, 1120, 84, 12); g.fill(); g.restore();
+  text("Nemotron writes the tests. Both commits run them.", W / 2, H - 94, { size: 38, weight: 500, color: C.paper, align: "center", alpha: a });
+  const b = prog(lt, 7.6, 8.1);
+  g.save(); g.globalAlpha = b; g.fillStyle = C.paper2; rrect(110, 90, 640, 150, 12); g.fill(); g.strokeStyle = C.line; g.lineWidth = 2; g.stroke(); g.restore();
+  label("REQ-V9 · sort the file list", 140, 135, { alpha: b });
+  text("26 of 32 fail before, pass after", 140, 190, { size: 36, weight: 700, alpha: b });
+  label("100% of the new function covered", 140, 225, { alpha: b, size: 15 });
+}
+
+/* 7. the catch */
+function sCatch(t) {
+  fill(C.paper);
+  if (t < 45.3) {
+    head("Every test green.", 140, 170, 41.5, t);
+    head("It still leaked.", 140 + 790, 170, 42.3, t, { color: C.hot });
+    const im = pic("../../dossier/shots/v7/after-filter_star.png");
+    const k = ease((t - 41.6) / 3.6), z = lerp(1.05, 1.5, k);
+    const x = 140, y = 250, w = 1640, h = 760;
+    g.save(); rrect(x, y, w, h, 12); g.clip();
+    g.fillStyle = "#1e1e1e"; g.fillRect(x, y, w, h);
+    g.translate(x + w / 2, y + h / 2); g.scale(z, z); g.translate(-lerp(760, 420, k), -lerp(330, 230, k));
+    if (im.naturalWidth) g.drawImage(im, 0, 0);
+    const hk = prog(t, 42.9, 43.3);
+    if (hk) { g.strokeStyle = C.hot; g.lineWidth = 4 / z; g.globalAlpha = hk; g.strokeRect(6, 196, 1086 * hk, 44); }
+    g.restore();
+    const lk = prog(t, 43.3, 43.7);
+    g.save(); g.globalAlpha = lk; g.fillStyle = C.ink; rrect(x + 40, y + h - 110, 820, 70, 10); g.fill(); g.restore();
+    text("GET /api/browse?match=*  →  .vault-secrets.json", x + 70, y + h - 64, { size: 26, weight: 500, font: MONO, color: C.paper, alpha: lk });
+    return;
+  }
+  // the routing card, captured from the app
+  const im = pic("clips/v7.png");
+  const lt = t - 45.3, k = ease(lt / 1.6);
+  const z = lerp(1920 * .9 / 1600, 2.6, k), cx = lerp(800, 1430, k), cy = lerp(450, 180, k);
+  g.save(); g.translate(W / 2 + lerp(0, 380, k), H / 2 + 40); g.scale(z, z); g.translate(-cx, -cy);
+  g.shadowColor = "rgba(20,20,20,.18)"; g.shadowBlur = 20; rrect(0, 0, 1600, 900, 6); g.fillStyle = C.paper2; g.fill(); g.shadowColor = "transparent";
+  if (im.naturalWidth) g.drawImage(im, 0, 0, 1600, 900);
+  g.restore();
+  g.save(); g.globalAlpha = .96; g.fillStyle = C.paper; g.fillRect(0, 0, W, 200); g.fillRect(0, 200, lerp(0, 860, k), H); g.restore();
+  head("Only this goes to a human.", 140, 150, 45.5, t);
+  const a = prog(t, 46.6, 47.1);
+  label("routed to", 140, 330, { alpha: a });
+  text("Aino Virtanen", 140, 400, { size: 60, weight: 700, alpha: a });
+  text("Team Security", 140, 460, { size: 40, weight: 500, color: C.hot, alpha: a });
+  label("3 lines · 3 tests passed before, fail now", 140, 530, { alpha: prog(t, 47.2, 47.6), color: C.sub });
+  label("sent back · the fix merges", 140, 570, { alpha: prog(t, 47.9, 48.3), color: C.sub });
+}
+
+/* 8. day and night */
+function sNight(t) {
+  const lt = t - 49.2;
+  const dusk = prog(t, 50.2, 52.6), night = prog(t, 52.4, 54.6);
+  // sky: day -> dusk -> night, pixel-stepped through the dither
+  const from = dusk < 1 ? DAY : DUSK, to = dusk < 1 ? DUSK : NIGHT, mix = dusk < 1 ? dusk : night;
+  sky(0, 0, W, H, 20, t, { from, to, mix, horizon: -.15, stars: night * 2.2 });
+  for (let i = 0; i < 4; i++) cloud(((hash(i, 2) * 2400 + t * (25 + i * 8)) % 2600) - 400, 90 + i * 70, 16, i, night > .5 ? "#3b3552" : "#ffffff", .7);
+  // pixel sun sets, moon rises
+  const sx = 1500, sy = lerp(260, 1150, ease((t - 49.4) / 3.6));
+  const disc = (x, y, r, col, bite) => { for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r && !(bite && (i - 3) ** 2 + (j + 2) ** 2 <= r * r * .7)) { g.fillStyle = col; g.fillRect(x + i * 14, y + j * 14, 14, 14); } };
+  disc(sx, sy, 6, "#ffc46b");
+  const my = lerp(1200, 230, ease((t - 52.6) / 3)); disc(380, my, 5, "#eceae3", true);
+  g.fillStyle = C.ink; g.fillRect(0, 1000, W, 80);
+  // the app between them, flipping to dark with its own pixel rings (frames from the app)
+  const ak = out((t - 51.4) / .8);
+  if (ak > 0) {
+    const f = clamp(Math.round((2.0 + Math.max(0, t - 52.2)) * 30) + 1, 1, 244);
+    const im = pic(`clips/theme/${String(f).padStart(4, "0")}.jpg`);
+    const w = 1100, h = 619, x = W / 2 - w / 2, y = 290 + (1 - ak) * 500;
+    g.save(); g.globalAlpha = ak; g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 50; rrect(x, y, w, h, 12); g.fillStyle = C.paper; g.fill(); g.shadowColor = "transparent";
+    g.clip(); if (im.naturalWidth) g.drawImage(im, x, y, w, h); g.restore();
+  }
+  const dc = night > .5 ? C.paper : C.ink;
+  g.fillStyle = night > .5 ? C.night : C.paper; g.fillRect(0, 110, W, 130);
+  head("Review code with ease all day", W / 2, 205, 49.4, t, { align: "center", size: 80, color: dc });
+  const nk = out((t - 54.8) / .5);
+  if (nk > 0) { g.save(); g.fillStyle = C.ink; g.fillRect(0, 1000, W, 80); g.restore(); }
+  text("and night.", W / 2, 990 + (1 - nk) * 30, { size: 72, weight: 700, color: C.paper, align: "center", alpha: nk, ls: -2 });
+}
+
+/* 9. numbers */
+function sNumbers(t) {
+  fill(C.paper); rain(t, .08);
+  head("25 seeded mistakes. 17 of them risky.", 140, 190, 57.1, t, { size: 80 });
+  const rows = [["the repo's own tests", 5, C.ink, 57.8], ["trust the dino", 17, C.hot, 58.8]];
+  rows.forEach(([name, n, col, t0], r) => {
+    const y = 380 + r * 230, k = ease((t - t0) / 1.4), shown = Math.round(k * n);
+    label(name, 140, y, { alpha: prog(t, t0 - .3, t0), color: r ? C.hot : C.mute });
+    for (let i = 0; i < 17; i++) {
+      const x = 140 + i * 66;
+      g.fillStyle = i < shown ? col : "transparent"; g.fillRect(x, y + 30, 54, 54);
+      g.strokeStyle = i < shown ? col : C.line; g.lineWidth = 3; g.strokeRect(x + 1.5, y + 31.5, 51, 51);
+    }
+    text(`${shown}/17`, W - 140, y + 84, { size: 110, weight: 700, color: col, align: "right", alpha: prog(t, t0 - .3, t0), ls: -4 });
+  });
+  const f = prog(t, 60.6, 61.2);
+  label("risky mistakes caught · 2 of 8 harmless ones flagged", 140, 900, { alpha: f, color: C.sub });
+  label("rules fitted to this set: they show the rules work here, not that 17/17 holds on new code", 140, 940, { alpha: f, size: 15 });
+}
+
+/* 10. end card */
+function sEnd(t) {
+  fill(C.paper);
+  const k = prog(t, 63, 64.4);
+  const gr = frame({ pose: "stars", t: 3 }).map((row) => row.map((c) => (c === "g" || c === "k" ? "." : c)));
+  const cell = 16, cw = 54, ch = 44, ox = 1020, oy = 1000 - ch * cell, sw = gr[0].length;
+  sky(ox, oy, cw * cell, ch * cell, cell, t, { from: DUSK, stars: 1.2, dome: { cx: 9 + sw / 2, rx: sw / 2 + 11, ry: ch - 1, k: ease(k) } });
+  g.fillStyle = C.ink; g.fillRect(0, 1000, W, 4);
+  dino(gr, ox + 9 * cell, 1000, cell);
+  head("trust the dino", 140, 470, 63.4, t, { size: 120 });
+  const a = prog(t, 64.4, 65);
+  text("dino.umarbek.dev", 144, 560, { size: 34, weight: 500, font: MONO, color: C.ink, alpha: a });
+  label("review agent code by function · tests by nemotron", 144, 640, { alpha: prog(t, 65.2, 65.8), size: 15 });
+  label("a human only where a rule says so", 144, 670, { alpha: prog(t, 65.2, 65.8), size: 15 });
+  const fo = prog(t, 69.2, 70.2); if (fo) { g.globalAlpha = fo; fill("#000"); g.globalAlpha = 1; }
+}
+
+const FN = { type: sType, eras: sEras, three: sThree, montage: sMontage, graph: sGraph, run: sRun, catch: sCatch, night: sNight, numbers: sNumbers, end: sEnd };
+window.render = async (t) => {
+  t = clamp(t, 0, DUR - 1e-6);
+  const sc = SCENES.find(([, a, b]) => t >= a && t < b) || SCENES[SCENES.length - 1];
+  need.length = 0;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+  FN[sc[0]](t);
+  if (need.length) { await Promise.all(need); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; FN[sc[0]](t); }
+};
+window.DUR = DUR;
+await document.fonts.ready;
+window.ready = true;
+</script></body></html>
