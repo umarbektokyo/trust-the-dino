@@ -1,7 +1,21 @@
 :root {
   --bg: #e8e7e2; --panel: #f3f2ee; --paper: #fbfbf8; --ink: #141414; --mute: #8a8981; --line: #d6d5ce;
   --hot: #ff5a1f; --hot-soft: #ffe3d6; --lit: #fff1c2; --add: #e3ecd8; --del: #f6e2da;
+  --faint: #b5b4ac; --sub: #4a4a44; --why: #5a5a54; --hover: #e9e8e2; --hover2: #dedcd5; --sel: #dcdad2;
+  --sel-meta: #a9a8a0; --sel-hover: #2b2b28; --cov: #c9c8c0; --del-tx: #6d5b55; --lit-add: #e9efc6; --tip-sub: #b8b7af;
+  --code-k: #3a5a8a; --code-s: #6a7a22; --code-c: #a3a29a;
   --mono: ui-monospace, "SF Mono", Menlo, monospace; --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+/* night: the same rules, warm near-black instead of paper. Ink stays the inverse colour, so selected rows,
+   test boxes and the tooltip turn light-on-dark into dark-on-light without their own rules. */
+html[data-theme=dark] {
+  --bg: #1a1a18; --panel: #121211; --paper: #1d1d1b; --ink: #eceae3; --mute: #8f8e86; --line: #2c2c29;
+  --hot: #ff6a33; --hot-soft: #3d2116; --lit: #3a3320; --add: #1c2818; --del: #301c17;
+  --faint: #55544f; --sub: #b4b3ab; --why: #a3a29a; --hover: #1f1f1d; --hover2: #242422; --sel: #2a2a27;
+  --sel-meta: #6d6c66; --sel-hover: #d4d3cb; --cov: #4a4a45; --del-tx: #c9a397; --lit-add: #2a3420; --tip-sub: #6d6c66;
+  --code-k: #8fb0e0; --code-s: #b7c46c; --code-c: #6f6e68;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
@@ -16,7 +30,7 @@ code { font: 12px var(--mono); }
 i.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ink); }
 i.dot.hot { background: var(--hot); }
 i.dot.open { background: none; border: 1.5px solid var(--ink); width: 5px; height: 5px; margin: 0 1.5px; }
-i.dot.none { background: none; border: 1px solid #b5b4ac; width: 6px; height: 6px; margin: 0 1px; }
+i.dot.none { background: none; border: 1px solid var(--faint); width: 6px; height: 6px; margin: 0 1px; }
 
 /* ---------- frame: top bar, two sidebars around the editor ---------- */
 #bar { flex: none; height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 18px;
@@ -25,10 +39,10 @@ i.dot.none { background: none; border: 1px solid #b5b4ac; width: 6px; height: 6p
 .crumbs a { color: var(--mute); } .crumbs a:hover { color: var(--ink); }
 .crumbs > :first-child { color: var(--ink); font-weight: 600; letter-spacing: .02em; }
 .crumbs > :last-child { color: var(--ink); }
-.crumbs i { font-style: normal; color: #b5b4ac; }
+.crumbs i { font-style: normal; color: var(--faint); }
 .panels { display: flex; gap: 2px; flex: none; }
 .panels button { width: 22px; height: 20px; display: grid; place-items: center; border-radius: 4px; color: var(--mute); font-size: 11px; }
-.panels button:hover { background: #dcdad2; color: var(--ink); }
+.panels button:hover { background: var(--sel); color: var(--ink); }
 .panels button[disabled] { opacity: .35; pointer-events: none; }
 .panels button i { width: 13px; height: 10px; border: 1px solid currentColor; border-radius: 2px; position: relative; }
 .panels button i::after { content: ""; position: absolute; top: 0; bottom: 0; width: 4px; background: transparent; }
@@ -63,7 +77,7 @@ a.row:hover { background: var(--bg); }
 .row.quiet { color: var(--mute); }
 .row.proj { grid-template-columns: 160px minmax(0, 1fr) auto 90px; gap: 16px; padding: 13px 6px; }
 .row.proj .name { font-size: 14px; font-weight: 600; }
-.row.proj .about { color: #4a4a44; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.proj .about { color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row.proj .meta { grid-column: auto; text-align: right; }
 .row.proj.off { color: var(--mute); } .row.proj.off .name, .row.proj.off .about { color: var(--mute); font-weight: 400; }
 
@@ -79,25 +93,25 @@ nav .sec { display: block; padding: 16px 18px 8px; }
           border-top: 1px solid var(--line); font: 12px var(--mono); }
 .branch span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .branch .meta { font-size: 10px; color: var(--mute); flex: none; }
-.branch:hover { background: #dedcd5; }
+.branch:hover { background: var(--hover2); }
 .branch.sel { font-weight: 600; }
 .commit { display: grid; grid-template-columns: 8px 1fr; gap: 3px 10px; align-items: center; width: 100%;
           padding: 9px 18px 9px 26px; border-top: 1px solid var(--line); background: var(--panel); }
-a.commit:hover { background: #e9e8e2; }
+a.commit:hover { background: var(--hover); }
 .commit .msg { font-size: 13px; line-height: 1.35; }
 .commit .meta { grid-column: 2; font: 10.5px var(--mono); color: var(--mute); }
 .commit.quiet { color: var(--mute); }
 .commit.sel { background: var(--ink); color: var(--panel); }
-.commit.sel .meta { color: #a9a8a0; }
+.commit.sel .meta { color: var(--sel-meta); }
 .commit.sel i.dot:not(.hot) { background: var(--panel); }
 /* selected stays selected under the pointer: hover only lifts the dark background a step, the text keeps its contrast */
-a.commit.sel:hover { background: #2b2b28; }
+a.commit.sel:hover { background: var(--sel-hover); }
 .units { padding: 4px 0 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .units .label { display: block; padding: 10px 18px 3px 44px; }
 .unit { display: flex; align-items: center; gap: 10px; width: 100%; padding: 5px 18px 5px 44px; font: 12px var(--mono); }
 .unit span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.unit:hover { background: #e9e8e2; }
-.unit.sel { background: #dcdad2; }
+.unit:hover { background: var(--hover); }
+.unit.sel { background: var(--sel); }
 
 /* ---------- middle: one unit ---------- */
 main { overflow: auto; min-width: 0; position: relative; }
@@ -145,20 +159,20 @@ main { overflow: auto; min-width: 0; position: relative; }
         font: 12px/1.65 var(--mono); }
 .ln { display: grid; grid-template-columns: 6px 46px 18px 1fr; tab-size: 4; }
 .ln .cov { background: transparent; }
-.ln.run .cov { background: #c9c8c0; }
+.ln.run .cov { background: var(--cov); }
 .ln.never .cov { background: var(--hot); }
-.ln .n { text-align: right; padding-right: 10px; color: #b5b4ac; user-select: none; }
+.ln .n { text-align: right; padding-right: 10px; color: var(--faint); user-select: none; }
 .ln .op { color: var(--mute); user-select: none; }
 .ln .tx { white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 12px; }
-.ln.add { background: var(--add); } .ln.del { background: var(--del); } .ln.del .tx { color: #6d5b55; }
+.ln.add { background: var(--add); } .ln.del { background: var(--del); } .ln.del .tx { color: var(--del-tx); }
 .ln.guard { box-shadow: inset 0 0 0 1.5px var(--hot); }
 .ln.lit { background: var(--lit); }
-.ln.lit.add { background: #e9efc6; }
+.ln.lit.add { background: var(--lit-add); }
 .note { grid-column: 4; margin: 2px 0 6px; padding: 3px 8px; background: var(--hot); color: #fff; border-radius: 4px;
         font: 11px/1.4 var(--sans); width: fit-content; }
 .fold { grid-column: 1 / -1; padding: 1px 0 1px 70px; color: var(--mute); background: var(--bg); font-size: 11px; }
 .flash { animation: flash 1.4s; } @keyframes flash { from { background: var(--hot-soft); } }
-.k { color: #3a5a8a; } .s { color: #6a7a22; } .c { color: #a3a29a; }
+.k { color: var(--code-k); } .s { color: var(--code-s); } .c { color: var(--code-c); }
 .end { height: 80px; }
 
 /* ---------- right: who decides, what the tests say ---------- */
@@ -167,7 +181,7 @@ aside { background: var(--bg); overflow: auto; padding: 20px 20px 60px; }
 .ask .who { font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--hot); }
 .ask p { margin: 8px 0 12px; font-size: 14px; line-height: 1.45; }
 .ask .ev { display: grid; gap: 1px; margin-bottom: 14px; }
-.ask .ev div { font: 11px/1.5 var(--mono); color: #4a4a44; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ask .ev div { font: 11px/1.5 var(--mono); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ask .ev span { color: var(--mute); }
 .acts { display: flex; gap: 8px; }
 .acts button { flex: 1; text-align: center; padding: 8px 0; border-radius: 6px; border: 1px solid var(--ink); font-size: 12.5px; }
@@ -198,7 +212,7 @@ aside { background: var(--bg); overflow: auto; padding: 20px 20px 60px; }
 .q.noise summary::before { content: "▸ "; } .q.noise[open] summary::before { content: "▾ "; }
 .q.noise summary:hover { color: var(--ink); }
 .q.noise .boxes { margin-top: 8px; }
-.q.noise .box.fail { background: #c9c8c0; color: var(--paper); }
+.q.noise .box.fail { background: var(--cov); color: var(--paper); }
 .tdetail { margin-top: 8px; padding: 9px 11px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
            display: grid; gap: 3px; }
 .tdetail b { font-weight: 500; font-size: 12.5px; }
@@ -211,14 +225,14 @@ aside { background: var(--bg); overflow: auto; padding: 20px 20px 60px; }
 .failed { margin-top: 22px; display: grid; gap: 10px; }
 .fcard { background: var(--paper); border: 1px solid var(--line); border-left: 3px solid var(--hot); border-radius: 6px; padding: 10px 12px; }
 .fcard b { font-weight: 500; display: block; }
-.fcard .why { font: 11px/1.45 var(--mono); color: #5a5a54; margin-top: 4px; }
+.fcard .why { font: 11px/1.45 var(--mono); color: var(--why); margin-top: 4px; }
 .fcard .was { font: 10.5px var(--mono); color: var(--mute); margin-top: 6px; display: flex; justify-content: space-between; }
 .fcard .was button:hover { color: var(--ink); text-decoration: underline; }
 pre.src { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 4px; font: 10.5px/1.5 var(--mono);
           white-space: pre-wrap; max-height: 300px; overflow: auto; }
 .tip { position: fixed; z-index: 8; pointer-events: none; background: var(--ink); color: var(--panel); padding: 6px 9px;
        border-radius: 5px; font-size: 12px; max-width: 280px; line-height: 1.35; }
-.tip span { display: block; font: 10.5px var(--mono); color: #b8b7af; margin-top: 2px; }
+.tip span { display: block; font: 10.5px var(--mono); color: var(--tip-sub); margin-top: 2px; }
 .empty { color: var(--mute); font-size: 12.5px; }
 
 /* ---------- merge, at commit level ---------- */
@@ -277,7 +291,8 @@ pre.src { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 4
 .tokenform input { width: 160px; }
 
 /* reset demo: quiet, bottom of home */
-.home-in .reset { display: block; margin: 48px 0 0; font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase;
+.home-foot { display: flex; align-items: center; gap: 12px; margin-top: 48px; }
+.home-in .reset { display: block; margin: 0; font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase;
                   color: var(--mute); cursor: pointer; }
 .home-in .reset:hover { color: var(--ink); text-decoration: underline; }
 .home-in .reset.armed { color: var(--ink); text-decoration: underline; }
@@ -337,3 +352,79 @@ pre.src { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 4
   .branch-in { padding: 16px 16px 80px; }
   .addrepo, .addrepo:has([name=token]) { grid-template-columns: 1fr; }
 }
+
+/* ---------- day and night (theme.js) ---------- */
+.theme { width: 28px; height: 26px; display: grid; place-items: center; border-radius: 5px; flex: none; }
+.theme:hover { background: var(--sel); }
+.theme svg { overflow: hidden; }
+/* going to night: the sun sets, then the moon rises, then the stars come out one by one; to day, the reverse */
+.theme .sun { fill: var(--hot); transition: transform .4s steps(6) .3s; }
+.theme .moon { fill: var(--ink); transform: translateY(12px); transition: transform .4s steps(6); }
+.theme .st { fill: var(--ink); opacity: 0; transition: opacity 0s; }
+html[data-theme=dark] .theme .sun { transform: translateY(12px); transition-delay: 0s; }
+html[data-theme=dark] .theme .moon { transform: none; transition-delay: .3s; }
+html[data-theme=dark] .theme .st { opacity: 1; transition-delay: calc(.65s + var(--i) * .09s);
+                                   animation: twinkle 3s steps(1) calc(1.2s + var(--i) * .7s) infinite; }
+@keyframes twinkle { 0%, 85% { opacity: 1; } 86%, 100% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .theme * { transition: none !important; animation: none !important; } }
+#bar .theme { margin-right: 4px; }
+.home-in .top .theme { margin-left: auto; margin-right: 6px; }
+
+/* the switch itself: the new look spreads from the button in pixel-stepped rings */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { animation: night-reveal .75s steps(9, end) both; }
+@keyframes night-reveal {
+  from { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 0px)); }
+  to { clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 0px)); }
+}
+
+/* ---------- replay of the test run (replay.js) ---------- */
+.runlog { font: 10.5px/1.5 var(--mono); color: var(--mute); border: 1px solid var(--line); border-radius: 6px;
+          padding: 8px 10px; margin: -4px 0 14px; background: var(--paper); }
+.rl-head { display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: .1em; font-size: 9.5px; margin-bottom: 6px; }
+.rl-head button { color: var(--mute); text-decoration: underline; text-transform: none; letter-spacing: 0; }
+.agents { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.agent { display: inline-flex; align-items: center; gap: 5px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); }
+.agent.me { border-color: var(--ink); }
+.agent i { width: 6px; height: 6px; background: var(--faint); }
+.agent.busy i { background: var(--hot); animation: blink .5s steps(1) infinite; }
+.agent.done i { background: var(--ink); }
+.rl { animation: rl-in .2s steps(3) both; }
+.rl.bad { color: var(--hot); }
+.rl.end { color: var(--ink); }
+.rl code { font: inherit; }
+@keyframes rl-in { from { opacity: 0; transform: translateY(3px); } }
+.runlog.over { opacity: .75; }
+.runlog.over .rl:not(.end) { display: none; }
+/* while it replays: questions are there, boxes pop in as their round finishes, totals wait for the end */
+.replaying .box[data-test] { opacity: 0; transform: scale(.4); }
+.replaying .box[data-test].shown { opacity: 1; transform: none; transition: transform .18s steps(3), opacity .18s steps(2); }
+.replaying .q h4 span, .replaying .qmeta, .replaying .cov-line, .replaying .failed, .replaying .q.noise summary { visibility: hidden; }
+.replaying .q.noise { display: none; }
+
+/* home: a bigger sun and moon, and a sky behind the page */
+.home-in .top { align-items: center; }
+.home-in .top .theme { width: 46px; height: 46px; margin-right: 0; }
+.home-in .top .theme svg { width: 36px; height: 36px; }
+body.home #app { position: relative; }
+.home-in { position: relative; z-index: 1; }
+.sky { position: absolute; inset: 0 0 auto 0; height: 48vh; overflow: hidden; pointer-events: none; z-index: 0; }
+.cloud { position: absolute; left: 0; fill: var(--line); animation: drift linear infinite; transform-origin: left top;
+         transition: opacity .6s steps(4); }
+.cloud .under { fill: var(--hover2); }
+.cloud svg { transform: scale(var(--s, 1)); transform-origin: left top; display: block; }
+@keyframes drift { from { transform: translateX(-140px); } to { transform: translateX(100vw); } }
+.star { position: absolute; width: 3px; height: 3px; background: var(--ink); opacity: 0; transition: opacity .5s steps(3); }
+.star.big { width: 4px; height: 4px; box-shadow: 4px 0 var(--ink), -4px 0 var(--ink), 0 4px var(--ink), 0 -4px var(--ink); background: var(--ink); transform: scale(.75); }
+html[data-theme=dark] .cloud { opacity: 0; }
+html[data-theme=dark] .star { opacity: var(--o); animation: star-twinkle steps(1) infinite; }
+@keyframes star-twinkle { 0%, 80% { opacity: var(--o); } 81%, 90% { opacity: .1; } 91%, 100% { opacity: var(--o); } }
+@media (prefers-reduced-motion: reduce) { .cloud, .star { animation: none !important; } }
+.home-in section { position: relative; background: var(--panel); } /* stars and clouds pass behind the lists, never over text */
+/* while the tests run, the diff stands alone: no lines-run or never-run marks yet */
+#main.testing .ln .cov { background: transparent !important; transition: none; }
+#main .ln .cov { transition: background .3s steps(3); }
+/* written but not run yet: a grey box with no mark; it takes its colour when go test reports */
+.replaying .box[data-test].shown.writing { background: var(--cov); color: transparent; outline: none; }
+.rl .dots::after { content: ""; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }

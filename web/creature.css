@@ -2,6 +2,8 @@
 .peek { --peek-ink: #141414; --peek-eye: #fbfbf8; --peek-plate: #9a998f; --peek-hot: #ff5a1f;
         position: fixed; left: 0; bottom: 6px; z-index: 20; width: 96px; pointer-events: none; }
 /* the sprite has 5 empty columns (20px) on each side for props, so it overhangs the 96px box evenly */
+/* at night the dino is drawn light on dark: ink and eye swap, the plates dim */
+html[data-theme=dark] .peek { --peek-ink: #eceae3; --peek-eye: #121211; --peek-plate: #6f6e68; --peek-hot: #ff6a33; }
 .peek-body { display: block; margin: 0 -20px; cursor: grab; pointer-events: auto; line-height: 0; touch-action: none; user-select: none; }
 .peek-body:active { cursor: grabbing; }
 .peek-body:hover svg { transform: translateY(-2px); }
@@ -10,25 +12,25 @@
 .peek-body:focus-visible { outline: 2px solid var(--peek-hot); outline-offset: 2px; }
 
 .peek-chat { position: absolute; bottom: 56px; left: 0; width: min(320px, calc(100vw - 16px)); /* left set by creature.js */
-             pointer-events: auto; background: #fbfbf8; border: 1px solid var(--peek-ink); border-radius: 10px;
+             pointer-events: auto; background: var(--paper, #fbfbf8); border: 1px solid var(--peek-ink); border-radius: 10px;
              box-shadow: 0 8px 24px rgba(20, 20, 20, .12); display: flex; flex-direction: column; max-height: min(360px, calc(100vh - 90px)); }
 .peek-chat::after { content: ""; position: absolute; bottom: -6px; left: var(--tail, 50%); width: 10px; height: 10px; margin-left: -5px;
-                    background: #fbfbf8; border-right: 1px solid var(--peek-ink); border-bottom: 1px solid var(--peek-ink);
+                    background: var(--paper, #fbfbf8); border-right: 1px solid var(--peek-ink); border-bottom: 1px solid var(--peek-ink);
                     transform: rotate(45deg); }
 .peek-chat[hidden] { display: none; }
-.peek-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid #d6d5ce; }
+.peek-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line, #d6d5ce); }
 .peek-title { flex: 1; font: 10px/1.3 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .1em;
-              text-transform: uppercase; color: #8a8981; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.peek-close { font: 16px/1 sans-serif; color: #8a8981; cursor: pointer; padding: 0 2px; }
+              text-transform: uppercase; color: var(--mute, #8a8981); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.peek-close { font: 16px/1 sans-serif; color: var(--mute, #8a8981); cursor: pointer; padding: 0 2px; }
 .peek-close:hover { color: var(--peek-ink); }
 .peek-log { overflow: auto; padding: 10px 12px; display: grid; gap: 8px; }
 .peek-msg { margin: 0; font: 13px/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif; }
-.peek-msg.user { justify-self: end; background: var(--peek-ink); color: #f3f2ee; padding: 6px 10px; border-radius: 8px; max-width: 85%; }
-.peek-msg.pending { color: #8a8981; }
-.peek-form { border-top: 1px solid #d6d5ce; }
+.peek-msg.user { justify-self: end; background: var(--peek-ink); color: var(--panel, #f3f2ee); padding: 6px 10px; border-radius: 8px; max-width: 85%; }
+.peek-msg.pending { color: var(--mute, #8a8981); }
+.peek-form { border-top: 1px solid var(--line, #d6d5ce); }
 .peek-input { width: 100%; box-sizing: border-box; border: 0; background: transparent; padding: 10px 12px;
-              font: 13px "Helvetica Neue", Helvetica, Arial, sans-serif; outline: none; border-radius: 0 0 10px 10px; }
-.peek-input:disabled { color: #8a8981; }
+              font: 13px "Helvetica Neue", Helvetica, Arial, sans-serif; outline: none; border-radius: 0 0 10px 10px; color: inherit; }
+.peek-input:disabled { color: var(--mute, #8a8981); }
 
 /* drawn by the shader (dinofx.js): the SVG keeps the size and hit area, the canvas paints over it and the sky beside it */
 .peek-body { position: relative; }

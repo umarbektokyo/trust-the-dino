@@ -6,6 +6,8 @@ import { loadDecisions, decide, isOpen, commitState, needsHuman } from "./decisi
 import { mountPanels, setEmpty, apply as applyPanels, controls, MOBILE, showPane } from "./panels.js";
 import { config, loadConfig, start, watch, token } from "./jobs.js";
 import { startTour, firstVisit } from "./tour.js";
+import { themeButton, initTheme, skyLayer } from "./theme.js";
+import { replay, forgetRuns } from "./replay.js";
 
 const $ = (id) => document.getElementById(id);
 const enc = encodeURIComponent;
@@ -103,12 +105,13 @@ function renderHome() {
     return p.ready ? `<a class="row proj" href="#/p/${enc(p.id)}">${inner}</a>` : `<div class="row proj off">${inner}</div>`;
   }).join("");
   $("main").innerHTML = `<div class="home-in">
-    <div class="top"><h1>trust the dino</h1><button class="help" data-tour title="Walkthrough" aria-label="Walkthrough">?</button></div>
+    <div class="top"><h1>trust the dino</h1>${themeButton()}</div>
     ${wait ? `<section><div class="label">waiting for you</div>${wait}</section>` : ""}
     <section><div class="label sechead"><span>projects</span>${config.canAdd && !add.open ? `<button data-add>add repository</button>` : ""}</div>
       ${add.open ? addForm() : ""}${projs}</section>
-    <button class="reset" data-reset title="Remove connected repositories, decisions and merges">reset demo</button>
-  </div>`;
+    <div class="home-foot"><button class="reset" data-reset title="Remove connected repositories, decisions and merges">reset demo</button>
+      <button class="help" data-tour title="Walkthrough" aria-label="Walkthrough">?</button></div>
+  </div>${skyLayer()}`;
 }
 
 /* ---------- add a repository ---------- */
@@ -140,6 +143,7 @@ async function submitAdd(form) {
     if (el) el.textContent = s.line || s.state;
     if (s.state === "failed") { Object.assign(add, { busy: false, error: "Failed" + (s.line ? ": " + s.line : "") }); if (view.screen === "home") renderHome(); }
     if (s.state === "done") {
+      forgetRuns();
       await loadProjects();
       Object.assign(add, { open: false, busy: false, url: "", name: "" });
       if (s.project && project(s.project)) location.hash = `#/p/${enc(s.project)}`;
@@ -158,7 +162,7 @@ function renderBar() {
   if (view.unit) crumbs.push(`<span>${esc(view.unit.name)}</span>`);
   const st = view.screen === "review" && view.c ? status(view.c) : "";
   const menu = view.p ? `<button class="mmenu" data-menu aria-label="Branches and commits" aria-expanded="${document.body.classList.contains("menu")}">☰</button>` : "";
-  $("bar").innerHTML = `${menu}<div class="crumbs">${crumbs.join('<i>/</i>')}</div><div class="state">${st}</div><button class="help" data-tour title="Walkthrough" aria-label="Walkthrough">?</button>${controls()}`;
+  $("bar").innerHTML = `${menu}<div class="crumbs">${crumbs.join('<i>/</i>')}</div><div class="state">${st}</div>${themeButton()}${controls()}`;
   applyPanels();
 }
 
@@ -272,12 +276,18 @@ function render() {
   setEmpty("nav", !view.p);
   if (s === "project") { renderBranch(); $("side").innerHTML = ""; setEmpty("side", true); }
   else if (s === "missing") { $("main").innerHTML = `<div class="branch-in"><div class="bhead"><b>${esc(view.caseId)}</b><span class="label">no review yet</span></div></div>`; setEmpty("side", true); }
-  else { renderMain($("main"), view.unit); setEmpty("side", !renderSide($("side"), view.d, view.caseId, view.unit)); }
+  else {
+    $("main").classList.remove("testing");
+    renderMain($("main"), view.unit);
+    setEmpty("side", !renderSide($("side"), view.d, view.caseId, view.unit));
+    replay($("side"), view.d, view.caseId, view.unit);  // first visit only
+  }
   renderTabs(s === "review" && Boolean($("side").innerHTML));
   renderBar();
 }
 
 mountPanels($("app"));
+initTheme();
 wireReview(() => (view?.screen === "review" ? { d: view.d, caseId: view.caseId, unit: view.unit, label } : null), render);
 addEventListener("hashchange", () => { document.body.classList.remove("menu"); route(); });
 document.addEventListener("click", (ev) => {
@@ -307,6 +317,7 @@ document.addEventListener("click", async (ev) => {
   } else if (rs) {
     rs.disabled = true; rs.textContent = "resetting";
     await fetch("/api/reset", { method: "POST", body: "{}" });
+    forgetRuns();
     await Promise.all([loadProjects(), loadDecisions()]);
     Object.assign(add, { open: false, busy: false, error: "" });
     if (location.hash.replace(/^#\/?/, "")) location.hash = "#/"; else await route();

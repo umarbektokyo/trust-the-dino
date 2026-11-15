@@ -352,6 +352,7 @@ export function mountCreature(root) {
   }
 
   addEventListener("resize", () => { state.x = Math.min(state.x, innerWidth - WIDTH); draw(); placeChat(); });
+  document.addEventListener("themechange", () => { fx?.recolor(); draw(); });
   draw();
   return { setContext };
 }

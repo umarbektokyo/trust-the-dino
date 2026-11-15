@@ -101,12 +101,15 @@ export function dinoFx(button, cell) {
   let fx;
   try { fx = quad(gl, FRAG); } catch (e) { console.warn("dino shader:", e.message); return null; }
 
-  const css = getComputedStyle(button);
-  const color = (v, fb) => rgb(css.getPropertyValue(v) || fb);
-  fx.set("u_ink", ...color("--peek-ink", "#141414"));
-  fx.set("u_plate", ...color("--peek-plate", "#9a998f"));
-  fx.set("u_eye", ...color("--peek-eye", "#fbfbf8"));
-  fx.set("u_hot", ...color("--peek-hot", "#ff5a1f"));
+  const recolor = () => { // from the CSS variables, so day and night both come from creature.css
+    const css = getComputedStyle(button);
+    const color = (v, fb) => rgb(css.getPropertyValue(v) || fb);
+    fx.set("u_ink", ...color("--peek-ink", "#141414"));
+    fx.set("u_plate", ...color("--peek-plate", "#9a998f"));
+    fx.set("u_eye", ...color("--peek-eye", "#fbfbf8"));
+    fx.set("u_hot", ...color("--peek-hot", "#ff5a1f"));
+  };
+  recolor();
   fx.set("u_paper", ...rgb("#fbfbf8"));
   fx.set("u_cell", cell);
 
@@ -116,6 +119,7 @@ export function dinoFx(button, cell) {
   button.classList.add("gl");
 
   return {
+    recolor,
     draw(g, { sky = 0, heat = 0, t = 0 } = {}) {
       if (lost) return false;
       const w = g[0].length, h = g.length;
