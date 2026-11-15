@@ -7,3 +7,5 @@ decisions.json
 .DS_Store
 __pycache__/
 .claude/
+video/raw/
+video/*.webm
