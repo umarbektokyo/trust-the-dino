@@ -166,24 +166,27 @@ async function story() {
   await glide(".scene .pair figure:nth-child(2) img", { ms: 800 });
   await wait(1200);
   await still("1-before-after");
-  await click(".scene [data-flip]");
+  await click('.scene [data-view="overlay"]');
   const ov = page.locator(".scene .overlay").first();
   const b = await ov.boundingBox();
   const oy = b.y + b.height / 2;
   await glide([b.x + b.width * 0.5, oy]);
   await page.mouse.down();
-  for (const f of [0.08, 0.92, 0.5]) await glide([b.x + b.width * f, oy], { ms: 900 });
+  for (const f of [0.08, 0.92]) await glide([b.x + b.width * f, oy], { ms: 900 });
   await page.mouse.up();
   await wait(700);
   await click(`#nav a.branch[href*="${enc("agent/req-v8-preview-size")}"]`);
   await glide("#main a.row .msg", { ms: 700 });
-  await say("Nothing risky, so no owner has to stop it.", 2600);
+  await say("Nothing risky, so the approver merges it.", 1400);
+  await click("#main a.row [data-merge]", { ms: 600 });
+  await page.locator("#main a.row .done").waitFor();
+  await wait(1400);
 
   // 4. REQ-V7: the moved check
   scene("REQ-V7: the moved check");
   await click(`#nav a.branch[href*="${enc("agent/req-v7-glob")}"]`);
   await glide('#main a.row:has-text("server-side glob") .who', { ms: 700 });
-  await say("This one waits on Security.", 2600);
+  await say("This one waits on Security.", 2200);
   await click('#main a.row:has-text("server-side glob") .msg');
   await page.locator("#main .ln.guard").waitFor();
   await wait(600);
@@ -210,6 +213,8 @@ async function story() {
   await scrollTo('.scene[data-scene="1"]', { block: "start" });
   await click('.scene[data-scene="1"] .pair figure:nth-child(2) img', { ms: 800 });
   await wait(600);
+  await page.waitForFunction(() => document.querySelector(".zoom img")?.complete);
+  await wait(300);
   const z = await page.locator(".zoom img").boundingBox();     // point at .vault-secrets.json in the screenshot
   await glide([z.x + z.width * 0.175, z.y + z.height * 0.345], { ms: 900 });
   await wait(2000);

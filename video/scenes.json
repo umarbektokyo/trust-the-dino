@@ -12,31 +12,31 @@
     "name": "REQ-V8: a UI change"
   },
   {
-    "t": 37.3,
+    "t": 37.8,
     "name": "REQ-V7: the moved check"
   },
   {
-    "t": 56.2,
+    "t": 56.4,
     "name": "REQ-V7: the tests"
   },
   {
-    "t": 66,
+    "t": 66.2,
     "name": "REQ-V7: the leak in the app"
   },
   {
-    "t": 76.8,
+    "t": 77.2,
     "name": "REQ-V7: sent back"
   },
   {
-    "t": 84.8,
+    "t": 85.3,
     "name": "The fix commit"
   },
   {
-    "t": 97.7,
+    "t": 98.1,
     "name": "Ask the dino"
   },
   {
-    "t": 113.1,
+    "t": 113.3,
     "name": "End card"
   }
 ]

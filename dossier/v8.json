@@ -7,6 +7,7 @@
   "head": "agent/req-v8-preview-size",
   "lang": "go",
   "agent": "vault-agent",
+  "approver": "Mikko Laine",
   "content": "../v7/content",
   "scenes": [
    {
