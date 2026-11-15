@@ -18,7 +18,8 @@ const loadProjects = async () => { projects = (await (await fetch("../dossier/pr
 await loadProjects();
 const dossiers = {};
 const load = (c) => (dossiers[c] ??= fetch(`../dossier/${c}.json`, { cache: "no-cache" })
-  .then((r) => (r.ok ? r.json() : null)).catch(() => null));
+  .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+  .then((d) => { if (!d) delete dossiers[c]; return d; }));  // a failed load (e.g. a restart) is tried again next time
 
 /* ---------- lookups ---------- */
 
@@ -199,7 +200,7 @@ function renderNav() {
       const inner = `<i class="dot ${hot ? "hot" : c.case ? "" : "none"}"></i><span class="msg">${esc(subject(c))}</span>
         <span class="meta">${esc(c.hash.slice(0, 7))} · ${esc(c.date)}</span>`;
       h += c.case ? `<a class="commit ${cur ? "sel" : ""}" href="${commitHref(c)}">${inner}</a>` : `<div class="commit quiet">${inner}</div>`;
-      if (!cur) continue;
+      if (!cur || !view.d) continue;  // no review loaded: nothing to list under the commit
       h += `<div class="units">`;
       for (const layer of LAYERS) {
         const us = view.d.units.filter((u) => u.layer === layer);
