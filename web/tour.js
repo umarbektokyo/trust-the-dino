@@ -30,7 +30,7 @@ const STEPS = [
   { hash: V7, find: () => $$("#side .ask"),
     text: "The one decision a person must make: who decides, and the three lines that make it matter. The secrets file sits in the folder this function lists." },
   { hash: V7, find: () => $$("#side .boxes"),
-    text: "One box per test. Black passes now, orange fails now. A + marks a test written for this commit; the others were saved from earlier commits and run again here." },
+    text: "One box per test: ✓ passes now, ✗ fails now. Under each row it says how many were written for this commit and how many were saved from earlier ones. Pick a box to read the test." },
   { hash: V7, find: () => $$("#side .q h4"),
     text: "Tests answer two questions: does it do what the requirement asks, and does everything that worked still work." },
   { hash: V7, find: () => $$("#side .box.fail").slice(0, 1).map((b) => b.closest(".q")), hover: () => $$("#side .box.fail")[0],

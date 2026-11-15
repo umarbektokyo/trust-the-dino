@@ -278,9 +278,20 @@ export function mountCreature(root) {
     return p;
   }
 
+  // The bubble sits over the dino but never past the window edge; its tail keeps pointing at the dino.
+  function placeChat() {
+    if (chat.hidden) return;
+    const EDGE = 8, w = chat.offsetWidth, box = el.getBoundingClientRect();
+    const mid = box.left + box.width / 2;
+    const left = Math.max(EDGE, Math.min(mid - w / 2, innerWidth - EDGE - w));
+    chat.style.left = left - box.left + "px";
+    chat.style.setProperty("--tail", Math.max(14, Math.min(mid - left, w - 14)) + "px");
+  }
+
   function openChat() {
     state.talking = true; state.target = null; state.act = null;
     chat.hidden = false;
+    placeChat();
     const hasCommit = Boolean(state.ctx.caseId);
     el.querySelector(".peek-title").textContent = hasCommit ? state.ctx.title || state.ctx.caseId : "trust";
     input.disabled = !hasCommit;
@@ -339,7 +350,7 @@ export function mountCreature(root) {
     draw();
   }
 
-  addEventListener("resize", () => { state.x = Math.min(state.x, innerWidth - WIDTH); });
+  addEventListener("resize", () => { state.x = Math.min(state.x, innerWidth - WIDTH); draw(); placeChat(); });
   draw();
   return { setContext };
 }

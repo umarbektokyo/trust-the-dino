@@ -9,10 +9,10 @@
 .peek-body.land svg { transform: scale(1.1, .82); transform-origin: 50% 100%; }
 .peek-body:focus-visible { outline: 2px solid var(--peek-hot); outline-offset: 2px; }
 
-.peek-chat { position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); width: 320px;
+.peek-chat { position: absolute; bottom: 56px; left: 0; width: min(320px, calc(100vw - 16px)); /* left set by creature.js */
              pointer-events: auto; background: #fbfbf8; border: 1px solid var(--peek-ink); border-radius: 10px;
-             box-shadow: 0 8px 24px rgba(20, 20, 20, .12); display: flex; flex-direction: column; max-height: 360px; }
-.peek-chat::after { content: ""; position: absolute; bottom: -6px; left: 50%; width: 10px; height: 10px; margin-left: -5px;
+             box-shadow: 0 8px 24px rgba(20, 20, 20, .12); display: flex; flex-direction: column; max-height: min(360px, calc(100vh - 90px)); }
+.peek-chat::after { content: ""; position: absolute; bottom: -6px; left: var(--tail, 50%); width: 10px; height: 10px; margin-left: -5px;
                     background: #fbfbf8; border-right: 1px solid var(--peek-ink); border-bottom: 1px solid var(--peek-ink);
                     transform: rotate(45deg); }
 .peek-chat[hidden] { display: none; }
@@ -37,3 +37,8 @@
 .peek-body.gl svg { visibility: hidden; }
 .peek-body:hover .peek-gl { transform: translateY(-2px); }
 .peek-body.land .peek-gl { transform: scale(1.1, .82); transform-origin: 50% 100%; }
+
+/* phones: a smaller dino (the chat keeps its full size and stays on screen, see placeChat) */
+@media (max-width: 720px) {
+  .peek-body { transform: scale(.75); transform-origin: 50% 100%; }
+}

@@ -2,6 +2,17 @@
 // can trade sides. Sizes belong to the content (nav / side), not to the screen edge.
 
 const KEY = "trust:layout";
+
+// Phones get one column instead of three: tabs pick what fills it (Change = the middle, Tests and Decide = the side).
+export const MOBILE = "(max-width: 720px)";
+export function showPane(p) {
+  document.body.dataset.pane = p;
+  document.querySelectorAll("[data-pane-tab]").forEach((b) => {
+    b.classList.toggle("on", b.dataset.paneTab === p);
+    b.setAttribute("aria-selected", b.dataset.paneTab === p);
+  });
+  document.getElementById(p === "change" ? "main" : "side")?.scrollTo(0, 0);
+}
 const MIN = 180, MAX = 620;
 const L = Object.assign({ nav: { w: 270, open: true }, side: { w: 340, open: true }, swap: false },
                         JSON.parse(localStorage.getItem(KEY) || "{}"));

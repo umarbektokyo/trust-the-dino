@@ -3,7 +3,7 @@
 
 import { esc, renderMain, renderSide, wireReview } from "./review.js";
 import { loadDecisions, decide, isOpen, commitState, needsHuman } from "./decisions.js";
-import { mountPanels, setEmpty, apply as applyPanels, controls } from "./panels.js";
+import { mountPanels, setEmpty, apply as applyPanels, controls, MOBILE, showPane } from "./panels.js";
 import { config, loadConfig, start, watch, token } from "./jobs.js";
 import { startTour, firstVisit } from "./tour.js";
 
@@ -155,8 +155,26 @@ function renderBar() {
   if (view.c) crumbs.push(`<a href="${commitHref(view.c)}">${esc(view.c.req || view.c.hash.slice(0, 7))}</a>`);
   if (view.unit) crumbs.push(`<span>${esc(view.unit.name)}</span>`);
   const st = view.screen === "review" && view.c ? status(view.c) : "";
-  $("bar").innerHTML = `<div class="crumbs">${crumbs.join('<i>/</i>')}</div><div class="state">${st}</div><button class="help" data-tour title="Walkthrough" aria-label="Walkthrough">?</button>${controls()}`;
+  const menu = view.p ? `<button class="mmenu" data-menu aria-label="Branches and commits" aria-expanded="${document.body.classList.contains("menu")}">☰</button>` : "";
+  $("bar").innerHTML = `${menu}<div class="crumbs">${crumbs.join('<i>/</i>')}</div><div class="state">${st}</div><button class="help" data-tour title="Walkthrough" aria-label="Walkthrough">?</button>${controls()}`;
   applyPanels();
+}
+
+/* ---------- phone: tabs instead of side panels ---------- */
+
+// Change = the code and screenshots; Tests and Decide = the two halves of the side panel.
+// A new function always opens on Change; Decide carries the orange dot while its decision is open.
+let tabsFor = null;
+function renderTabs(hasSide) {
+  const u = view.screen === "review" ? view.unit : null;
+  const tabs = !u || !hasSide ? [] : [["change", "Change"], ...(u.tests?.tests?.length ? [["tests", "Tests"]] : []),
+    ...(u.routed ? [["decide", "Decide", isOpen(view.caseId, u)]] : [])];
+  $("mtabs").hidden = tabs.length < 2;
+  const key = u && `${view.caseId}/${u.id}`;
+  if (key !== tabsFor || !tabs.some(([k]) => k === document.body.dataset.pane)) { tabsFor = key; document.body.dataset.pane = "change"; }
+  $("mtabs").innerHTML = tabs.map(([k, name, hot]) =>
+    `<button role="tab" data-pane-tab="${k}">${hot ? '<i class="dot hot"></i>' : ""}${name}</button>`).join("");
+  showPane(document.body.dataset.pane);
 }
 
 /* ---------- left: branches → commits → changed functions ---------- */
@@ -247,18 +265,25 @@ async function startReview(hash, tok) {
 function render() {
   const s = view.screen;
   for (const k of ["home", "project", "review", "missing"]) document.body.classList.toggle(k, k === s);
-  if (s === "home") { renderHome(); $("nav").innerHTML = $("side").innerHTML = ""; return; }
+  if (s === "home") { renderHome(); $("nav").innerHTML = $("side").innerHTML = ""; renderTabs(false); return; }
   if (view.p) renderNav(); else $("nav").innerHTML = "";
   setEmpty("nav", !view.p);
   if (s === "project") { renderBranch(); $("side").innerHTML = ""; setEmpty("side", true); }
   else if (s === "missing") { $("main").innerHTML = `<div class="branch-in"><div class="bhead"><b>${esc(view.caseId)}</b><span class="label">no review yet</span></div></div>`; setEmpty("side", true); }
   else { renderMain($("main"), view.unit); setEmpty("side", !renderSide($("side"), view.d, view.caseId, view.unit)); }
+  renderTabs(s === "review" && Boolean($("side").innerHTML));
   renderBar();
 }
 
 mountPanels($("app"));
 wireReview(() => (view?.screen === "review" ? { d: view.d, caseId: view.caseId, unit: view.unit, label } : null), render);
-addEventListener("hashchange", route);
+addEventListener("hashchange", () => { document.body.classList.remove("menu"); route(); });
+document.addEventListener("click", (ev) => {
+  const tab = ev.target.closest?.("[data-pane-tab]");
+  if (tab) return showPane(tab.dataset.paneTab);
+  const m = ev.target.closest?.("[data-menu]");
+  if (m) m.setAttribute("aria-expanded", document.body.classList.toggle("menu"));
+});
 document.addEventListener("click", async (ev) => {
   const m = ev.target.closest?.("[data-merge]");
   if (!m) return;
@@ -302,4 +327,4 @@ try {
   creature.setContext({ screen: view.screen === "missing" ? "review" : view.screen, project: view.p?.id ?? null,
     branch: view.b?.name ?? null, caseId: view.caseId ?? null, unitId: view.unit?.id ?? null });
 } catch { /* not there yet */ }
-if (firstVisit()) startTour();
+if (firstVisit() && !matchMedia(MOBILE).matches) startTour(); // the walkthrough points at the three-column layout

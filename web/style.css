@@ -180,16 +180,23 @@ aside { background: var(--bg); overflow: auto; padding: 20px 20px 60px; }
 .q h4 span { font: 11px var(--mono); color: var(--mute); }
 .q h4 span.bad { color: var(--hot); }
 .boxes { display: flex; flex-wrap: wrap; gap: 5px; }
-.box { width: 20px; height: 20px; border-radius: 4px; background: var(--ink); }
+.box { width: 20px; height: 20px; border-radius: 4px; background: var(--ink); color: var(--paper);
+       display: grid; place-items: center; font: 600 11px/1 var(--sans); }
 .box.fail { background: var(--hot); }
-.box.lit, .box:hover { outline: 2px solid var(--hot); outline-offset: 1.5px; }
-.box.fail.lit, .box.fail:hover { outline-color: var(--ink); }
-/* "+" = a test written for this commit; no mark = saved from an earlier commit */
-.box { position: relative; }
-.box.new::before, .box.new::after { content: ""; position: absolute; left: 50%; top: 50%; background: var(--paper);
-  transform: translate(-50%, -50%); }
-.box.new::before { width: 8px; height: 1.5px; }
-.box.new::after { width: 1.5px; height: 8px; }
+.box.lit, .box:hover, .box.picked { outline: 2px solid var(--hot); outline-offset: 1.5px; }
+.box.fail.lit, .box.fail:hover, .box.fail.picked { outline-color: var(--ink); }
+/* the key: what the two marks mean, said once above all the boxes */
+.key { font: 11px var(--mono); color: var(--mute); margin: -6px 0 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.kbox { width: 14px; height: 14px; border-radius: 3px; background: var(--ink); color: var(--paper); font: 600 9px/14px var(--sans);
+        font-style: normal; text-align: center; }
+.kbox.fail { background: var(--hot); margin-left: 6px; }
+.qmeta { font: 10.5px var(--mono); color: var(--mute); margin-top: 6px; }
+.tdetail { margin-top: 8px; padding: 9px 11px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+           display: grid; gap: 3px; }
+.tdetail b { font-weight: 500; font-size: 12.5px; }
+.tdetail span { font: 10.5px/1.45 var(--mono); color: var(--mute); }
+.tdetail .go { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 3px; }
+.tdetail .go button { color: var(--ink); text-decoration: underline; }
 .cov-line { font: 11px var(--mono); color: var(--mute); margin: 18px 0 0; }
 .cov-line button { color: var(--hot); }
 .cov-line button:hover { text-decoration: underline; }
@@ -266,3 +273,59 @@ pre.src { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 4
                   color: var(--mute); cursor: pointer; }
 .home-in .reset:hover { color: var(--ink); text-decoration: underline; }
 .home-in .reset.armed { color: var(--ink); text-decoration: underline; }
+
+/* ---------- phones: one column; tabs pick Change / Tests / Decide, ☰ opens branches and commits ---------- */
+.mmenu, #mtabs { display: none; }
+@media (max-width: 720px) {
+  #bar { padding: 0 10px; gap: 8px; }
+  .mmenu { display: grid; place-items: center; flex: none; width: 28px; height: 26px; border-radius: 5px; font-size: 15px; }
+  .mmenu[aria-expanded=true] { background: var(--ink); color: var(--panel); }
+  .panels, .grip, #bar .help { display: none !important; }
+  /* first and last crumb only: where you are, and the way home */
+  .crumbs { flex: 1; }
+  .crumbs > :not(:first-child):not(:last-child):not(:nth-last-child(2)), .crumbs > a:nth-last-child(2):not(:first-child) { display: none; }
+  #bar .state { padding-right: 0; }
+  #bar .state .who, #bar .state .done { font-size: 0; } #bar .state .merge { font-size: 11px; } /* names live in the Decide tab */
+  .crumbs > :last-child { overflow: hidden; text-overflow: ellipsis; }
+
+  #mtabs:not([hidden]) { display: flex; flex: none; background: var(--bg); border-bottom: 1px solid var(--line); }
+  #mtabs button { flex: 1; display: flex; justify-content: center; align-items: center; gap: 6px; padding: 9px 0;
+                  font: 12px var(--sans); color: var(--mute); border-bottom: 2px solid transparent; }
+  #mtabs button.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+
+  /* panels.js sets three grid columns inline; a phone shows one pane at a time instead */
+  #app { display: block !important; }
+  #app > nav, #app > main, #app > aside { height: 100%; border: 0 !important; }
+  #app > nav, #app > aside { display: none; }
+  body.menu #app > nav { display: block !important; position: absolute; inset: 0; z-index: 6; }
+  body.review[data-pane=tests] #main, body.review[data-pane=decide] #main { display: none; }
+  body.review[data-pane=tests] #side, body.review[data-pane=decide] #side { display: block !important; }
+  body[data-pane=tests] #side .ask, body[data-pane=decide] #side .tests { display: none; }
+  aside { padding: 16px 16px 90px; }
+
+  /* the middle: less padding, references stacked, code scrolls sideways instead of wrapping */
+  .head { padding: 12px 16px; position: static; }
+  .head .title { flex-wrap: wrap; row-gap: 2px; }
+  .head .title .label { margin-left: 0; width: 100%; }
+  .head p { font-size: 14px; }
+  .sect { padding: 14px 16px 4px; }
+  .ref { grid-template-columns: 1fr; gap: 0; padding: 4px 0; }
+  .code { margin: 12px 12px 0; overflow-x: auto; font-size: 11px; }
+  .ln { min-width: max-content; grid-template-columns: 5px 36px 14px auto; }
+  .ln .tx { white-space: pre; overflow-wrap: normal; }
+  .note { position: sticky; left: 60px; white-space: normal; max-width: calc(100vw - 100px); }
+  .fold { padding-left: 56px; }
+  .shots { padding: 14px 12px 0; }
+  .pair { grid-template-columns: 1fr; }
+  .views [data-view=pair] { display: none; }
+
+  /* home and branch lists */
+  .home-in { padding: 7vh 16px 120px; }
+  .home-in h1 { margin-bottom: 36px; }
+  .row .msg { white-space: normal; }
+  .row.proj { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
+  .row.proj .about { grid-column: 1 / -1; white-space: normal; }
+  .row.proj .label { display: none; }
+  .branch-in { padding: 16px 16px 80px; }
+  .addrepo, .addrepo:has([name=token]) { grid-template-columns: 1fr; }
+}

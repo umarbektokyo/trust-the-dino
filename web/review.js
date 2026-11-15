@@ -6,6 +6,7 @@ const short = (id) => id.split(":").slice(1).join(":");
 
 import { decided, decide } from "./decisions.js";
 import { canDiff, pixelDiff } from "./pixeldiff.js";
+import { MOBILE, showPane } from "./panels.js";
 export { decided, isOpen } from "./decisions.js";
 
 export const tests = (u) => u.tests?.tests || [];
@@ -116,6 +117,8 @@ export function renderMain(el, u) {
     ${outs ? `<div class="sect"><span class="label">calls</span>${outs}</div>` : ""}
     ${cons ? `<div class="sect"><span class="label">result read by</span>${cons}</div>` : ""}
     <div class="end"></div>`;
+  // a phone has no room for two screenshots side by side: start on the one-image compare
+  if (matchMedia(MOBILE).matches) el.querySelectorAll(".scene").forEach((sc) => showView(sc, "overlay"));
 }
 
 /* ---------- side ---------- */
@@ -127,6 +130,21 @@ const QUESTIONS = [
   ["Does everything that worked still work?", (t) => t.meaning === "kept" || t.meaning === "regression"],
   ["Fails before and after", (t) => t.meaning === "fails on both"],
 ];
+
+// "4 written for this commit · 5 saved earlier": where the tests in a group come from, said once in words
+function origins(group) {
+  const kept = group.filter((t) => t.origin === "kept").length, made = group.length - kept;
+  return [made && `${made} written for this commit`, kept && `${kept} saved earlier`].filter(Boolean).join(" · ");
+}
+
+// what a picked box says: the test as a sentence, its result before and now, where it comes from, where to look
+function detail(t, c) {
+  const from = t.origin === "kept" ? `saved from ${esc(c.label(t.written_for))}` : "written for this commit";
+  return `<b>${t.head ? "✓" : "✗"} ${esc(sentence(t.name))}</b>
+    <span>${t.head ? "passes" : "fails"} now · ${t.base ? "passed" : "failed"} before · ${from}${t.status === "pending" ? " · trusted after merge" : ""}</span>
+    <span class="go">${t.lines.length ? `<button data-jump="${t.lines.join(",")}">show the ${t.lines.length} lines it runs</button>` : ""}${
+      t.head ? "" : `<button data-card-for="${esc(t.name)}">why it fails</button>`}</span>`;
+}
 
 export function renderSide(el, d, caseId, u) {
   let h = "";
@@ -143,13 +161,15 @@ export function renderSide(el, d, caseId, u) {
   }
   const ts = tests(u);
   if (ts.length) {
-    h += `<div class="tests"><div class="label"><span>tests</span><span>by nemotron</span></div>`;
+    h += `<div class="tests"><div class="label"><span>tests</span><span>by nemotron</span></div>
+      <div class="key"><i class="kbox">✓</i>passes <i class="kbox fail">✗</i>fails · pick a box to read the test</div>`;
     for (const [q, pick] of QUESTIONS) {
       const group = ts.filter(pick);
       if (!group.length) continue;
       const bad = group.filter((t) => !t.head).length;
       h += `<div class="q"><h4>${esc(q.replace("%REQ%", d.case.id))}<span class="${bad ? "bad" : ""}">${bad ? `${bad} of ${group.length} fail` : `${group.length} pass`}</span></h4>
-        <div class="boxes">${group.map((t) => `<button class="box ${t.head ? "" : "fail"} ${t.origin === "kept" ? "kept" : "new"}" data-test="${esc(t.name)}" aria-label="${esc(sentence(t.name))}"></button>`).join("")}</div></div>`;
+        <div class="boxes">${group.map((t) => `<button class="box ${t.head ? "" : "fail"} ${t.origin === "kept" ? "kept" : "new"}" data-test="${esc(t.name)}" aria-pressed="false" aria-label="${esc(sentence(t.name))}, ${t.head ? "passes" : "fails"}">${t.head ? "✓" : "✗"}</button>`).join("")}</div>
+        <div class="qmeta">${origins(group)}</div><div class="tdetail" hidden></div></div>`;
     }
     const cov = u.tests.coverage;
     if (cov != null) {
@@ -208,9 +228,10 @@ export function wireReview(ctx, rerender) {
     if (!ev.target.closest(".boxes, .code")) clearLit();
   });
 
-  const jump = (n) => {
-    const el = document.getElementById("L" + n);
+  const jump = (ns) => { // the first of these lines that is on the page (folded, unchanged lines are not)
+    const el = String(ns).split(",").map((n) => document.getElementById("L" + n)).find(Boolean);
     if (!el) return;
+    if (document.body.dataset.pane && document.body.dataset.pane !== "change") showPane("change");
     el.scrollIntoView({ block: "center", behavior: "smooth" });
     el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   };
@@ -240,16 +261,22 @@ export function wireReview(ctx, rerender) {
     const img = t.closest(".pair img");
     if (img) return document.body.append(Object.assign(document.createElement("div"), { className: "zoom", innerHTML: `<img src="${img.src}" alt="">` }));
     const j = t.closest("[data-jump]");
-    if (j) return jump(+j.dataset.jump);
+    if (j) return jump(j.dataset.jump);
     const s = t.closest("[data-src]");
     if (s) { const pre = s.closest(".fcard").querySelector("pre"); pre.hidden = !pre.hidden; return; }
-    const box = t.closest(".box");
-    if (box) {
-      const card = document.querySelector(`.fcard[data-card="${CSS.escape(box.dataset.test)}"]`);
-      if (card) return card.scrollIntoView({ block: "center", behavior: "smooth" });
-      const first = tests(c.unit).find((x) => x.name === box.dataset.test)?.lines[0];
-      return first && jump(first);
+    const box = t.closest(".box[data-test]");
+    if (box) { // pick: the group shows that test in words; picking it again closes it
+      const q = box.closest(".q"), out = q.querySelector(".tdetail"), again = box.classList.contains("picked");
+      document.querySelectorAll(".box.picked").forEach((b) => { b.classList.remove("picked"); b.setAttribute("aria-pressed", "false"); });
+      document.querySelectorAll(".tdetail").forEach((x) => { x.hidden = true; });
+      if (again) return;
+      box.classList.add("picked"); box.setAttribute("aria-pressed", "true");
+      out.innerHTML = detail(tests(c.unit).find((x) => x.name === box.dataset.test), c);
+      out.hidden = false;
+      return;
     }
+    const cardFor = t.closest("[data-card-for]");
+    if (cardFor) return document.querySelector(`.fcard[data-card="${CSS.escape(cardFor.dataset.cardFor)}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
     const dec = t.closest("[data-dec]");
     if (dec && !dec.disabled) {
       dec.disabled = true;
