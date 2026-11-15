@@ -174,8 +174,12 @@ aside { background: var(--bg); overflow: auto; padding: 20px 20px 60px; }
 .box.fail { background: var(--hot); }
 .box.lit, .box:hover { outline: 2px solid var(--hot); outline-offset: 1.5px; }
 .box.fail.lit, .box.fail:hover { outline-color: var(--ink); }
-.box.kept { background: none; box-shadow: inset 0 0 0 1.5px var(--ink); }
-.box.kept.fail { box-shadow: inset 0 0 0 1.5px var(--hot); }
+/* "+" = a test written for this commit; no mark = saved from an earlier commit */
+.box { position: relative; }
+.box.new::before, .box.new::after { content: ""; position: absolute; left: 50%; top: 50%; background: var(--paper);
+  transform: translate(-50%, -50%); }
+.box.new::before { width: 8px; height: 1.5px; }
+.box.new::after { width: 1.5px; height: 8px; }
 .cov-line { font: 11px var(--mono); color: var(--mute); margin: 18px 0 0; }
 .cov-line button { color: var(--hot); }
 .cov-line button:hover { text-decoration: underline; }

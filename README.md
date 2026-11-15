@@ -16,7 +16,8 @@ at what they have to decide. Built for Junction 2026 (Tieto: Earned Trust in AI 
   fails before and passes after proves the requirement; passed before and fails now is a regression.
   Each test knows the exact lines it runs.
 - **Tests are kept.** Tests whose intent is trusted are saved per project and run again on later
-  commits; a requirement's tests join only after a human merges it.
+  commits; a requirement's tests join only after a human merges it. In the review each test is a box:
+  black passes, orange fails, and a + marks a test written for this commit.
 - **Visual changes** are shown as before/after screenshots of the real app at both commits.
 - **The dino** walks along the bottom. Click it to ask about the open commit; it answers only from
   that commit's review and never makes the decision.

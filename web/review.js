@@ -126,7 +126,7 @@ export function renderSide(el, d, caseId, u) {
       if (!group.length) continue;
       const bad = group.filter((t) => !t.head).length;
       h += `<div class="q"><h4>${esc(q.replace("%REQ%", d.case.id))}<span class="${bad ? "bad" : ""}">${bad ? `${bad} of ${group.length} fail` : `${group.length} pass`}</span></h4>
-        <div class="boxes">${group.map((t) => `<button class="box ${t.head ? "" : "fail"} ${t.origin === "kept" ? "kept" : ""}" data-test="${esc(t.name)}" aria-label="${esc(sentence(t.name))}"></button>`).join("")}</div></div>`;
+        <div class="boxes">${group.map((t) => `<button class="box ${t.head ? "" : "fail"} ${t.origin === "kept" ? "kept" : "new"}" data-test="${esc(t.name)}" aria-label="${esc(sentence(t.name))}"></button>`).join("")}</div></div>`;
     }
     const cov = u.tests.coverage;
     if (cov != null) {
@@ -168,7 +168,7 @@ export function wireReview(ctx, rerender) {
       const t = tests(u).find((x) => x.name === box.dataset.test);
       t.lines.forEach((n) => document.getElementById("L" + n)?.classList.add("lit"));
       box.classList.add("lit");
-      const kept = (t.origin === "kept" ? ` · kept, written for ${esc(c.label(t.written_for))}` : "")
+      const kept = (t.origin === "kept" ? ` · kept, written for ${esc(c.label(t.written_for))}` : " · new, written for this commit")
         + (t.status === "pending" ? " · trusted after merge" : "");
       showTip(ev, `${esc(sentence(t.name))}<span>${t.head ? "passes" : "fails"} now · ${t.base ? "passed" : "failed"} before · runs ${t.lines.length} lines${kept}</span>`);
       return;
