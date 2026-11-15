@@ -334,6 +334,8 @@ document.addEventListener("submit", (ev) => {
 });
 await Promise.all([loadDecisions(), loadConfig()]);
 await route();
+// the first screen is drawn: let the loading screen go (it fades in pixel steps, then leaves the page)
+requestAnimationFrame(() => { const b = $("boot"); b?.classList.add("done"); setTimeout(() => b?.remove(), 500); });
 
 try {
   const { mountCreature } = await import("./creature.js");
