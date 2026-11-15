@@ -8,17 +8,5 @@
       "java"
     ],
     "about": "Ferry ticket terminal"
-  },
-  {
-    "id": "vault-demo",
-    "name": "vault-demo",
-    "repo": "samples/vault-demo",
-    "default": "main",
-    "langs": [
-      "go",
-      "svelte"
-    ],
-    "about": "https://github.com/umarbektokyo/vault-demo",
-    "added": true
   }
 ]
