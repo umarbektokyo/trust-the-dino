@@ -1,0 +1,4 @@
+{
+  "secret-store": {"team": "Team Platform", "owner": "Pieter Bakker", "why": "owns the ticket data file and who may read it"},
+  "browse-api":   {"team": "Team Terminal", "owner": "Sanne de Vries", "why": "owns the terminal menu (Main) and the Terminal queries"}
+}

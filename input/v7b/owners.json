@@ -1,0 +1,4 @@
+{
+  "secret-store": {"team": "Team Security", "owner": "Aino Virtanen", "why": "owns .vault-secrets.json and the rule that dotfiles are never listed"},
+  "browse-api":   {"team": "Team Files",    "owner": "Mikko Laine",   "why": "owns /api/browse and FileBrowser.svelte"}
+}

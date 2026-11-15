@@ -1,0 +1,1806 @@
+{
+ "case": {
+  "id": "REQ-V7",
+  "title": "Server-side glob filter for browse",
+  "repo": "samples/vault",
+  "base": "main",
+  "head": "agent/req-v7-glob~1",
+  "lang": "go",
+  "agent": "vault-agent",
+  "approver": "Mikko Laine",
+  "content": "content",
+  "scenes": [
+   {
+    "name": "filter *.pdf",
+    "unit": "frontend/src/FileBrowser.svelte:markup",
+    "steps": [
+     {
+      "fill": ".search-input",
+      "text": "*.pdf"
+     },
+     {
+      "press": "Enter"
+     }
+    ],
+    "path": "/reports",
+    "viewport": [
+     760,
+     330
+    ]
+   },
+   {
+    "name": "filter *",
+    "unit": "frontend/src/FileBrowser.svelte:markup",
+    "steps": [
+     {
+      "fill": ".search-input",
+      "text": "*"
+     },
+     {
+      "press": "Enter"
+     }
+    ],
+    "path": "/",
+    "viewport": [
+     760,
+     330
+    ]
+   }
+  ],
+  "project": "vault"
+ },
+ "requirement": "# REQ-V7: server-side glob filter\n\nOwner of the request: Team Files (frontend). Repo: vault (Go backend, Svelte frontend).\n\n`GET /api/browse` accepts an optional `match` parameter, a shell glob (`*.pdf`, `report-*`).\nOnly entries whose name matches are returned. Typing a filter that contains `*` in the\nbrowser's filter box and pressing Enter uses it.\n\nNon-functional: existing browse behaviour without `match` is unchanged.\n",
+ "graph": {
+  "nodes": 93,
+  "edges": 350
+ },
+ "units": [
+  {
+   "id": "backend/main.go:handleBrowse",
+   "name": "handleBrowse",
+   "file": "backend/main.go",
+   "kind": "func",
+   "layer": "data",
+   "status": "changed",
+   "signature": "func handleBrowse(absContentRoot string, secrets *SecretsStore) http.HandlerFunc",
+   "lines": [
+    {
+     "op": " ",
+     "n": 758,
+     "text": "func handleBrowse(absContentRoot string, secrets *SecretsStore) http.HandlerFunc {"
+    },
+    {
+     "op": " ",
+     "n": 759,
+     "text": "\treturn func(w http.ResponseWriter, r *http.Request) {"
+    },
+    {
+     "op": " ",
+     "n": 760,
+     "text": "\t\tw.Header().Set(\"Content-Type\", \"application/json\")"
+    },
+    {
+     "op": " ",
+     "n": 761,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 762,
+     "text": "\t\treqPath := r.URL.Query().Get(\"path\")"
+    },
+    {
+     "op": " ",
+     "n": 763,
+     "text": "\t\tif reqPath == \"\" {"
+    },
+    {
+     "op": " ",
+     "n": 764,
+     "text": "\t\t\treqPath = \"/\""
+    },
+    {
+     "op": " ",
+     "n": 765,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 766,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 767,
+     "text": "\t\treqPath = filepath.Clean(\"/\" + reqPath)"
+    },
+    {
+     "op": " ",
+     "n": 768,
+     "text": "\t\tfullPath := filepath.Join(absContentRoot, reqPath)"
+    },
+    {
+     "op": " ",
+     "n": 769,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 770,
+     "text": "\t\tabsPath, err := filepath.Abs(fullPath)"
+    },
+    {
+     "op": " ",
+     "n": 771,
+     "text": "\t\tif err != nil || !strings.HasPrefix(absPath, absContentRoot) {"
+    },
+    {
+     "op": " ",
+     "n": 772,
+     "text": "\t\t\twriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"invalid path\"})"
+    },
+    {
+     "op": " ",
+     "n": 773,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 774,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 775,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 776,
+     "text": "\t\tinfo, err := os.Stat(absPath)"
+    },
+    {
+     "op": " ",
+     "n": 777,
+     "text": "\t\tif err != nil {"
+    },
+    {
+     "op": " ",
+     "n": 778,
+     "text": "\t\t\twriteJSON(w, http.StatusNotFound, ErrorResponse{Error: \"path not found\"})"
+    },
+    {
+     "op": " ",
+     "n": 779,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 780,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 781,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 782,
+     "text": "\t\tif !info.IsDir() {"
+    },
+    {
+     "op": " ",
+     "n": 783,
+     "text": "\t\t\twriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"not a directory\"})"
+    },
+    {
+     "op": " ",
+     "n": 784,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 785,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 786,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 787,
+     "text": "\t\tentries, err := os.ReadDir(absPath)"
+    },
+    {
+     "op": " ",
+     "n": 788,
+     "text": "\t\tif err != nil {"
+    },
+    {
+     "op": " ",
+     "n": 789,
+     "text": "\t\t\twriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: \"cannot read directory\"})"
+    },
+    {
+     "op": " ",
+     "n": 790,
+     "text": "\t\t\treturn"
+    },
+    {
+     "op": " ",
+     "n": 791,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 792,
+     "text": ""
+    },
+    {
+     "op": "+",
+     "n": 793,
+     "text": "\t\tmatch := r.URL.Query().Get(\"match\")"
+    },
+    {
+     "op": "+",
+     "n": 794,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 795,
+     "text": "\t\tfiles := make([]FileEntry, 0, len(entries))"
+    },
+    {
+     "op": " ",
+     "n": 796,
+     "text": "\t\tfor _, e := range entries {"
+    },
+    {
+     "op": "-",
+     "n": 795,
+     "text": "\t\t\tif strings.HasPrefix(e.Name(), \".\") {"
+    },
+    {
+     "op": "+",
+     "n": 797,
+     "text": "\t\t\tif match != \"\" {"
+    },
+    {
+     "op": "+",
+     "n": 798,
+     "text": "\t\t\t\tif ok, _ := filepath.Match(match, e.Name()); !ok {"
+    },
+    {
+     "op": "+",
+     "n": 799,
+     "text": "\t\t\t\t\tcontinue"
+    },
+    {
+     "op": "+",
+     "n": 800,
+     "text": "\t\t\t\t}"
+    },
+    {
+     "op": "+",
+     "n": 801,
+     "text": "\t\t\t} else if strings.HasPrefix(e.Name(), \".\") {"
+    },
+    {
+     "op": " ",
+     "n": 802,
+     "text": "\t\t\t\tcontinue"
+    },
+    {
+     "op": " ",
+     "n": 803,
+     "text": "\t\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 804,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 805,
+     "text": "\t\t\tinfo, err := e.Info()"
+    },
+    {
+     "op": " ",
+     "n": 806,
+     "text": "\t\t\tif err != nil {"
+    },
+    {
+     "op": " ",
+     "n": 807,
+     "text": "\t\t\t\tcontinue"
+    },
+    {
+     "op": " ",
+     "n": 808,
+     "text": "\t\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 809,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 810,
+     "text": "\t\t\tentryPath := filepath.Join(reqPath, e.Name())"
+    },
+    {
+     "op": " ",
+     "n": 811,
+     "text": "\t\t\tfiles = append(files, FileEntry{"
+    },
+    {
+     "op": " ",
+     "n": 812,
+     "text": "\t\t\t\tName:      e.Name(),"
+    },
+    {
+     "op": " ",
+     "n": 813,
+     "text": "\t\t\t\tPath:      entryPath,"
+    },
+    {
+     "op": " ",
+     "n": 814,
+     "text": "\t\t\t\tIsDir:     e.IsDir(),"
+    },
+    {
+     "op": " ",
+     "n": 815,
+     "text": "\t\t\t\tSize:      fileSize(info),"
+    },
+    {
+     "op": " ",
+     "n": 816,
+     "text": "\t\t\t\tModTime:   info.ModTime(),"
+    },
+    {
+     "op": " ",
+     "n": 817,
+     "text": "\t\t\t\tExt:       strings.ToLower(filepath.Ext(e.Name())),"
+    },
+    {
+     "op": " ",
+     "n": 818,
+     "text": "\t\t\t\tHasSecret: secrets.HasSecret(entryPath),"
+    },
+    {
+     "op": " ",
+     "n": 819,
+     "text": "\t\t\t})"
+    },
+    {
+     "op": " ",
+     "n": 820,
+     "text": "\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 821,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 822,
+     "text": "\t\tsort.Slice(files, func(i, j int) bool {"
+    },
+    {
+     "op": " ",
+     "n": 823,
+     "text": "\t\t\tif files[i].IsDir != files[j].IsDir {"
+    },
+    {
+     "op": " ",
+     "n": 824,
+     "text": "\t\t\t\treturn files[i].IsDir"
+    },
+    {
+     "op": " ",
+     "n": 825,
+     "text": "\t\t\t}"
+    },
+    {
+     "op": " ",
+     "n": 826,
+     "text": "\t\t\treturn strings.ToLower(files[i].Name) < strings.ToLower(files[j].Name)"
+    },
+    {
+     "op": " ",
+     "n": 827,
+     "text": "\t\t})"
+    },
+    {
+     "op": " ",
+     "n": 828,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 829,
+     "text": "\t\twriteJSON(w, http.StatusOK, BrowseResponse{Path: reqPath, Entries: files})"
+    },
+    {
+     "op": " ",
+     "n": 830,
+     "text": "\t}"
+    },
+    {
+     "op": " ",
+     "n": 831,
+     "text": "}"
+    }
+   ],
+   "in": [
+    {
+     "from": "backend/main.go:newMux",
+     "to": "backend/main.go:handleBrowse",
+     "kind": "calls",
+     "line": 221,
+     "text": "mux.HandleFunc(\"/api/browse\", handleBrowse(absContentRoot, secrets))"
+    }
+   ],
+   "out": [
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 772,
+     "text": "writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"invalid path\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 778,
+     "text": "writeJSON(w, http.StatusNotFound, ErrorResponse{Error: \"path not found\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 783,
+     "text": "writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: \"not a directory\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 789,
+     "text": "writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: \"cannot read directory\"})"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:fileSize",
+     "kind": "calls",
+     "line": 815,
+     "text": "Size:      fileSize(info),"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:SecretsStore.HasSecret",
+     "kind": "calls",
+     "line": 818,
+     "text": "HasSecret: secrets.HasSecret(entryPath),"
+    },
+    {
+     "from": "backend/main.go:handleBrowse",
+     "to": "backend/main.go:writeJSON",
+     "kind": "calls",
+     "line": 829,
+     "text": "writeJSON(w, http.StatusOK, BrowseResponse{Path: reqPath, Entries: files})"
+    }
+   ],
+   "consumers": [
+    {
+     "file": "frontend/src/FileBrowser.svelte",
+     "line": 352,
+     "text": "const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}${glob}`);"
+    }
+   ],
+   "route": "/api/browse",
+   "guards": [
+    {
+     "kind": "narrowed",
+     "cond": "strings.HasPrefix(e.Name(), \".\")",
+     "base": {
+      "line": 795,
+      "exit": "continue",
+      "cond": "strings.HasPrefix(e.Name(), \".\")",
+      "path": "strings.HasPrefix(e.Name(), \".\")"
+     },
+     "head": {
+      "line": 801,
+      "exit": "continue",
+      "cond": "strings.HasPrefix(e.Name(), \".\")",
+      "path": "!(match != \"\") && strings.HasPrefix(e.Name(), \".\")"
+     },
+     "added": "!(match != \"\")"
+    }
+   ],
+   "secret": [
+    {
+     "from": "backend/main.go:newMux",
+     "to": "resource:.vault-secrets.json",
+     "kind": "literal",
+     "line": 215,
+     "text": "filepath.Join(absContentRoot, \".vault-secrets.json\"),"
+    },
+    {
+     "from": "backend/main.go:newMux",
+     "to": "backend/main.go:Config.HMACSecret",
+     "kind": "reads",
+     "line": 216,
+     "text": "cfg.HMACSecret,"
+    },
+    {
+     "from": "backend/main.go:newMux",
+     "to": "backend/main.go:handleBrowse",
+     "kind": "calls",
+     "line": 221,
+     "text": "mux.HandleFunc(\"/api/browse\", handleBrowse(absContentRoot, secrets))"
+    }
+   ],
+   "routed": true,
+   "owner": {
+    "team": "Team Security",
+    "owner": "Aino Virtanen",
+    "why": "owns .vault-secrets.json and the rule that dotfiles are never listed"
+   },
+   "tests": {
+    "node": "backend/main.go:handleBrowse",
+    "code": "package main\n\nimport (\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"strings\"\n\t\"testing\"\n)\n\nfunc trustCreateFile(t *testing.T, dir, name string) {\n\tt.Helper()\n\tif err := os.WriteFile(filepath.Join(dir, name), []byte(\"data\"), 0o644); err != nil {\n\t\tt.Fatalf(\"failed to create file %s: %v\", name, err)\n\t}\n}\n\nfunc trustBrowseRequestWithMatch(t *testing.T, mux *http.ServeMux, path, match string) *httptest.ResponseRecorder {\n\tt.Helper()\n\turl := \"/api/browse?path=\" + path\n\tif match != \"\" {\n\t\turl += \"&match=\" + match\n\t}\n\treq := httptest.NewRequest(http.MethodGet, url, nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\treturn rr\n}\n\nfunc TestTrust_MatchStarPdfReturnsOnlyPdfFiles(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"report.pdf\")\n\ttrustCreateFile(t, root, \"image.png\")\n\ttrustCreateFile(t, root, \"notes.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"*.pdf\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif !strings.HasSuffix(e.Name, \".pdf\") {\n\t\t\tt.Errorf(\"expected only *.pdf matches, got %s\", e.Name)\n\t\t}\n\t}\n}\n\nfunc TestTrust_MatchReportDashReturnsPrefixedFiles(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"report-2024.pdf\")\n\ttrustCreateFile(t, root, \"report-final.docx\")\n\ttrustCreateFile(t, root, \"summary.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"report-*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif !strings.HasPrefix(e.Name, \"report-\") {\n\t\t\tt.Errorf(\"expected only report-* matches, got %s\", e.Name)\n\t\t}\n\t}\n}\n\nfunc TestTrust_MatchNoMatchReturnsEmptyEntries(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"a.pdf\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"*.xyz\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 0 {\n\t\tt.Errorf(\"expected no entries for non-matching glob, got %d\", len(resp.Entries))\n\t}\n}\n\nfunc TestTrust_MatchEmptyKeepsExistingBehaviour(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"visible.txt\")\n\ttrustCreateFile(t, root, \".hidden\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"expected dotfiles to be hidden when match is empty, got %s\", e.Name)\n\t\t}\n\t}\n}\n\nfunc TestTrust_MatchInvalidGlobReturnsBadRequest(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"[\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for invalid glob, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n}\n\nfunc TestTrust_MatchWithPathFilterAppliesGlob(t *testing.T) {\n\troot := setupTestDir(t)\n\tsub := filepath.Join(root, \"sub\")\n\tif err := os.MkdirAll(sub, 0o755); err != nil {\n\t\tt.Fatalf(\"failed to create subdir: %v\", err)\n\t}\n\ttrustCreateFile(t, sub, \"data.pdf\")\n\ttrustCreateFile(t, sub, \"data.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/sub\", \"*.pdf\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 1 || resp.Entries[0].Name != \"data.pdf\" {\n\t\tt.Errorf(\"expected only data.pdf in sub, got %v\", resp.Entries)\n\t}\n}\n\nfunc TestTrust_MatchDotfileGlobReturnsDotfiles(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".env\")\n\ttrustCreateFile(t, root, \".config\")\n\ttrustCreateFile(t, root, \"readme.md\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \".*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif !strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"expected only dotfiles for .* glob, got %s\", e.Name)\n\t\t}\n\t}\n}\n\nfunc TestTrust_EmptyPathDefaultsToRoot(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\treq := httptest.NewRequest(http.MethodGet, \"/api/browse\", nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\tif resp.Path != \"/\" {\n\t\tt.Errorf(\"expected path to default to /, got %q\", resp.Path)\n\t}\n}\n\nfunc TestTrust_InvalidPathReturnsBadRequest(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/../../etc\", \"\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for path traversal, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_NotFoundPathReturnsNotFound(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/does-not-exist\", \"\")\n\tif rr.Code != http.StatusNotFound {\n\t\tt.Errorf(\"expected status %d for missing path, got %d\", http.StatusNotFound, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"path not found\" {\n\t\tt.Errorf(\"expected error 'path not found', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_FilePathReturnsNotADirectory(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"file.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/file.txt\", \"\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for file path, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"not a directory\" {\n\t\tt.Errorf(\"expected error 'not a directory', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_UnreadableDirectoryReturnsInternalServerError(t *testing.T) {\n\troot := setupTestDir(t)\n\tlocked := filepath.Join(root, \"locked\")\n\tif err := os.MkdirAll(locked, 0o000); err != nil {\n\t\tt.Fatalf(\"failed to create locked dir: %v\", err)\n\t}\n\tdefer os.Chmod(locked, 0o755)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/locked\", \"\")\n\tif rr.Code != http.StatusInternalServerError {\n\t\tt.Errorf(\"expected status %d for unreadable dir, got %d\", http.StatusInternalServerError, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"cannot read directory\" {\n\t\tt.Errorf(\"expected error 'cannot read directory', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_MatchSkipsDotfileGuard(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".env\")\n\ttrustCreateFile(t, root, \"readme.md\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \".*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 1 || resp.Entries[0].Name != \".env\" {\n\t\tt.Errorf(\"expected only .env when matching .*, got %v\", resp.Entries)\n\t}\n}\n\nfunc TestTrust_InvalidPathPrefixReturnsBadRequest(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/../outside\", \"\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for path outside root, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}\n\nfunc TestTrust_MatchNonMatchingDotfileSkipped(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".env\")\n\ttrustCreateFile(t, root, \".config\")\n\ttrustCreateFile(t, root, \"readme.md\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"*.md\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 1 || resp.Entries[0].Name != \"readme.md\" {\n\t\tt.Errorf(\"expected only readme.md when matching *.md, got %v\", resp.Entries)\n\t}\n}",
+    "guard_code": "package main\n\nimport (\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"strings\"\n\t\"testing\"\n)\n\nfunc trustCreateFile(t *testing.T, dir, name string) {\n\tt.Helper()\n\tif err := os.WriteFile(filepath.Join(dir, name), []byte(\"data\"), 0o644); err != nil {\n\t\tt.Fatalf(\"failed to create file %s: %v\", name, err)\n\t}\n}\n\nfunc trustBrowseRequest(t *testing.T, mux *http.ServeMux, path, match string) *httptest.ResponseRecorder {\n\tt.Helper()\n\turl := \"/api/browse?path=\" + path\n\tif match != \"\" {\n\t\turl += \"&match=\" + match\n\t}\n\treq := httptest.NewRequest(http.MethodGet, url, nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\treturn rr\n}\n\nfunc TestTrustGuard_DotFilesHiddenWithoutMatch(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \"\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"without match, dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}\n\nfunc TestTrustGuard_DotFilesHiddenWithMatchStar(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \"*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"with match '*', dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}\n\nfunc TestTrustGuard_DotFilesHiddenWithMatchDotStar(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \".*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"with match '.*', dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}\n\nfunc TestTrustGuard_DotFilesHiddenWithMatchQuestionMark(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \"?*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"with match '?*', dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}",
+    "rounds": [
+     {
+      "round": 1,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 7.5,
+       "tokens": 3248,
+       "cached": true
+      },
+      "compiled": true,
+      "coverage": 75.0,
+      "tests": 7
+     },
+     {
+      "round": 2,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 12.9,
+       "tokens": 5720,
+       "cached": true
+      },
+      "compiled": true,
+      "coverage": 92.5,
+      "tests": 13
+     },
+     {
+      "round": 3,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 13.8,
+       "tokens": 8385,
+       "cached": true
+      },
+      "compiled": true,
+      "coverage": 92.5,
+      "tests": 15
+     }
+    ],
+    "coverage": 92.5,
+    "uncovered": [
+     772,
+     773,
+     774,
+     807
+    ],
+    "base_compiled": true,
+    "tests": [
+     {
+      "name": "TestTrustGuard_DotFilesHiddenWithMatchDotStar",
+      "from": "guard",
+      "head": false,
+      "base": true,
+      "meaning": "regression",
+      "message": [
+       "with match '.*', dot file .hidden should be hidden, but was returned"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       829
+      ],
+      "source": "func TestTrustGuard_DotFilesHiddenWithMatchDotStar(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \".*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"with match '.*', dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrustGuard_DotFilesHiddenWithMatchQuestionMark",
+      "from": "guard",
+      "head": false,
+      "base": true,
+      "meaning": "regression",
+      "message": [
+       "with match '?*', dot file .hidden should be hidden, but was returned"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       824,
+       825,
+       826,
+       829
+      ],
+      "source": "func TestTrustGuard_DotFilesHiddenWithMatchQuestionMark(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \"?*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"with match '?*', dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrustGuard_DotFilesHiddenWithMatchStar",
+      "from": "guard",
+      "head": false,
+      "base": true,
+      "meaning": "regression",
+      "message": [
+       "with match '*', dot file .hidden should be hidden, but was returned"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       824,
+       825,
+       826,
+       829
+      ],
+      "source": "func TestTrustGuard_DotFilesHiddenWithMatchStar(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \"*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"with match '*', dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrustGuard_DotFilesHiddenWithoutMatch",
+      "from": "guard",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       801,
+       802,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       824,
+       825,
+       826,
+       829
+      ],
+      "source": "func TestTrustGuard_DotFilesHiddenWithoutMatch(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".hidden\")\n\ttrustCreateFile(t, root, \"visible.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequest(t, mux, \"/\", \"\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"without match, dot file %s should be hidden, but was returned\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_EmptyPathDefaultsToRoot",
+      "from": "requirement",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       764,
+       765,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       801,
+       802,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       824,
+       825,
+       826,
+       829
+      ],
+      "source": "func TestTrust_EmptyPathDefaultsToRoot(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\treq := httptest.NewRequest(http.MethodGet, \"/api/browse\", nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\tif resp.Path != \"/\" {\n\t\tt.Errorf(\"expected path to default to /, got %q\", resp.Path)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_FilePathReturnsNotADirectory",
+      "from": "requirement",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       783,
+       784,
+       785
+      ],
+      "source": "func TestTrust_FilePathReturnsNotADirectory(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"file.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/file.txt\", \"\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for file path, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"not a directory\" {\n\t\tt.Errorf(\"expected error 'not a directory', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_InvalidPathPrefixReturnsBadRequest",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected status 400 for path outside root, got 404",
+       "expected error 'invalid path', got \"path not found\""
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       778,
+       779,
+       780
+      ],
+      "source": "func TestTrust_InvalidPathPrefixReturnsBadRequest(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/../outside\", \"\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for path outside root, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_InvalidPathReturnsBadRequest",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected status 400 for path traversal, got 404",
+       "expected error 'invalid path', got \"path not found\""
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       778,
+       779,
+       780
+      ],
+      "source": "func TestTrust_InvalidPathReturnsBadRequest(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/../../etc\", \"\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for path traversal, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"invalid path\" {\n\t\tt.Errorf(\"expected error 'invalid path', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchDotfileGlobReturnsDotfiles",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       826,
+       829
+      ],
+      "source": "func TestTrust_MatchDotfileGlobReturnsDotfiles(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".env\")\n\ttrustCreateFile(t, root, \".config\")\n\ttrustCreateFile(t, root, \"readme.md\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \".*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif !strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"expected only dotfiles for .* glob, got %s\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchEmptyKeepsExistingBehaviour",
+      "from": "requirement",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       801,
+       802,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       824,
+       825,
+       826,
+       829
+      ],
+      "source": "func TestTrust_MatchEmptyKeepsExistingBehaviour(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"visible.txt\")\n\ttrustCreateFile(t, root, \".hidden\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif strings.HasPrefix(e.Name, \".\") {\n\t\t\tt.Errorf(\"expected dotfiles to be hidden when match is empty, got %s\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchInvalidGlobReturnsBadRequest",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected status 400 for invalid glob, got 200"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       822,
+       829
+      ],
+      "source": "func TestTrust_MatchInvalidGlobReturnsBadRequest(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"[\")\n\tif rr.Code != http.StatusBadRequest {\n\t\tt.Errorf(\"expected status %d for invalid glob, got %d\", http.StatusBadRequest, rr.Code)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchNoMatchReturnsEmptyEntries",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       822,
+       829
+      ],
+      "source": "func TestTrust_MatchNoMatchReturnsEmptyEntries(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"a.pdf\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"*.xyz\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 0 {\n\t\tt.Errorf(\"expected no entries for non-matching glob, got %d\", len(resp.Entries))\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchNonMatchingDotfileSkipped",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       829
+      ],
+      "source": "func TestTrust_MatchNonMatchingDotfileSkipped(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".env\")\n\ttrustCreateFile(t, root, \".config\")\n\ttrustCreateFile(t, root, \"readme.md\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"*.md\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 1 || resp.Entries[0].Name != \"readme.md\" {\n\t\tt.Errorf(\"expected only readme.md when matching *.md, got %v\", resp.Entries)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchReportDashReturnsPrefixedFiles",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       826,
+       829
+      ],
+      "source": "func TestTrust_MatchReportDashReturnsPrefixedFiles(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"report-2024.pdf\")\n\ttrustCreateFile(t, root, \"report-final.docx\")\n\ttrustCreateFile(t, root, \"summary.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"report-*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif !strings.HasPrefix(e.Name, \"report-\") {\n\t\t\tt.Errorf(\"expected only report-* matches, got %s\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchSkipsDotfileGuard",
+      "from": "requirement",
+      "head": false,
+      "base": false,
+      "meaning": "fails on both",
+      "message": [
+       "expected only .env when matching .*, got [{.env /.env false 4 2026-11-15 05:12:55.782703269 +0200 EET .env false} {.hidden /.hidden false 6 2026-11-15 05:12:55.781885805 +0200 EET .hidden false}]"
+      ],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       823,
+       826,
+       829
+      ],
+      "source": "func TestTrust_MatchSkipsDotfileGuard(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \".env\")\n\ttrustCreateFile(t, root, \"readme.md\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \".*\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 1 || resp.Entries[0].Name != \".env\" {\n\t\tt.Errorf(\"expected only .env when matching .*, got %v\", resp.Entries)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchStarPdfReturnsOnlyPdfFiles",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       829
+      ],
+      "source": "func TestTrust_MatchStarPdfReturnsOnlyPdfFiles(t *testing.T) {\n\troot := setupTestDir(t)\n\ttrustCreateFile(t, root, \"report.pdf\")\n\ttrustCreateFile(t, root, \"image.png\")\n\ttrustCreateFile(t, root, \"notes.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/\", \"*.pdf\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tfor _, e := range resp.Entries {\n\t\tif !strings.HasSuffix(e.Name, \".pdf\") {\n\t\t\tt.Errorf(\"expected only *.pdf matches, got %s\", e.Name)\n\t\t}\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_MatchWithPathFilterAppliesGlob",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       793,
+       794,
+       795,
+       796,
+       797,
+       798,
+       799,
+       805,
+       806,
+       810,
+       811,
+       812,
+       813,
+       814,
+       815,
+       816,
+       817,
+       818,
+       819,
+       822,
+       829
+      ],
+      "source": "func TestTrust_MatchWithPathFilterAppliesGlob(t *testing.T) {\n\troot := setupTestDir(t)\n\tsub := filepath.Join(root, \"sub\")\n\tif err := os.MkdirAll(sub, 0o755); err != nil {\n\t\tt.Fatalf(\"failed to create subdir: %v\", err)\n\t}\n\ttrustCreateFile(t, sub, \"data.pdf\")\n\ttrustCreateFile(t, sub, \"data.txt\")\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/sub\", \"*.pdf\")\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status %d, got %d\", http.StatusOK, rr.Code)\n\t}\n\tresp := decodeBrowse(t, rr)\n\n\tif len(resp.Entries) != 1 || resp.Entries[0].Name != \"data.pdf\" {\n\t\tt.Errorf(\"expected only data.pdf in sub, got %v\", resp.Entries)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_NotFoundPathReturnsNotFound",
+      "from": "requirement",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       778,
+       779,
+       780
+      ],
+      "source": "func TestTrust_NotFoundPathReturnsNotFound(t *testing.T) {\n\troot := setupTestDir(t)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/does-not-exist\", \"\")\n\tif rr.Code != http.StatusNotFound {\n\t\tt.Errorf(\"expected status %d for missing path, got %d\", http.StatusNotFound, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"path not found\" {\n\t\tt.Errorf(\"expected error 'path not found', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     },
+     {
+      "name": "TestTrust_UnreadableDirectoryReturnsInternalServerError",
+      "from": "requirement",
+      "head": true,
+      "base": true,
+      "meaning": "kept",
+      "message": [],
+      "lines": [
+       758,
+       759,
+       760,
+       761,
+       762,
+       763,
+       767,
+       768,
+       769,
+       770,
+       771,
+       776,
+       777,
+       782,
+       787,
+       788,
+       789,
+       790,
+       791
+      ],
+      "source": "func TestTrust_UnreadableDirectoryReturnsInternalServerError(t *testing.T) {\n\troot := setupTestDir(t)\n\tlocked := filepath.Join(root, \"locked\")\n\tif err := os.MkdirAll(locked, 0o000); err != nil {\n\t\tt.Fatalf(\"failed to create locked dir: %v\", err)\n\t}\n\tdefer os.Chmod(locked, 0o755)\n\tmux := newMux(testConfig(root))\n\n\trr := trustBrowseRequestWithMatch(t, mux, \"/locked\", \"\")\n\tif rr.Code != http.StatusInternalServerError {\n\t\tt.Errorf(\"expected status %d for unreadable dir, got %d\", http.StatusInternalServerError, rr.Code)\n\t}\n\tresp := decodeError(t, rr)\n\tif resp.Error != \"cannot read directory\" {\n\t\tt.Errorf(\"expected error 'cannot read directory', got %q\", resp.Error)\n\t}\n}",
+      "origin": "new"
+     }
+    ],
+    "duplicates": [],
+    "dropped": []
+   },
+   "explain": "The browse endpoint filters entries by a shell glob pattern when the match parameter is provided."
+  },
+  {
+   "id": "frontend/src/FileBrowser.svelte:browse",
+   "name": "browse",
+   "file": "frontend/src/FileBrowser.svelte",
+   "kind": "func",
+   "layer": "data",
+   "status": "changed",
+   "signature": "",
+   "lines": [
+    {
+     "op": " ",
+     "n": 345,
+     "text": "  async function browse(path, pushHistory = true) {"
+    },
+    {
+     "op": "+",
+     "n": 346,
+     "text": "    const glob = filterText.includes('*') ? `&match=${encodeURIComponent(filterText)}` : '';"
+    },
+    {
+     "op": " ",
+     "n": 347,
+     "text": "    loading = true;"
+    },
+    {
+     "op": " ",
+     "n": 348,
+     "text": "    error = null;"
+    },
+    {
+     "op": " ",
+     "n": 349,
+     "text": "    selectedIndex = -1;"
+    },
+    {
+     "op": " ",
+     "n": 350,
+     "text": "    filterText = '';"
+    },
+    {
+     "op": " ",
+     "n": 351,
+     "text": "    try {"
+    },
+    {
+     "op": "-",
+     "n": 351,
+     "text": "      const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);"
+    },
+    {
+     "op": "+",
+     "n": 352,
+     "text": "      const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}${glob}`);"
+    },
+    {
+     "op": " ",
+     "n": 353,
+     "text": "      if (!res.ok) throw new Error('Failed to load directory');"
+    },
+    {
+     "op": " ",
+     "n": 354,
+     "text": "      const data = await res.json();"
+    },
+    {
+     "op": " ",
+     "n": 355,
+     "text": "      currentPath = data.path;"
+    },
+    {
+     "op": " ",
+     "n": 356,
+     "text": "      entries = data.entries;"
+    },
+    {
+     "op": " ",
+     "n": 357,
+     "text": "      if (pushHistory) {"
+    },
+    {
+     "op": " ",
+     "n": 358,
+     "text": "        history = [...history.slice(0, historyIndex + 1), path];"
+    },
+    {
+     "op": " ",
+     "n": 359,
+     "text": "        historyIndex = history.length - 1;"
+    },
+    {
+     "op": " ",
+     "n": 360,
+     "text": "      }"
+    },
+    {
+     "op": " ",
+     "n": 361,
+     "text": "    } catch (e) {"
+    },
+    {
+     "op": " ",
+     "n": 362,
+     "text": "      error = e.message;"
+    },
+    {
+     "op": " ",
+     "n": 363,
+     "text": "    } finally {"
+    },
+    {
+     "op": " ",
+     "n": 364,
+     "text": "      loading = false;"
+    },
+    {
+     "op": " ",
+     "n": 365,
+     "text": "    }"
+    },
+    {
+     "op": " ",
+     "n": 366,
+     "text": "  }"
+    }
+   ],
+   "in": [],
+   "out": [],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "The frontend sends a match parameter to the server when the filter text contains an asterisk."
+  },
+  {
+   "id": "frontend/src/FileBrowser.svelte:markup",
+   "name": "FileBrowser.svelte",
+   "file": "frontend/src/FileBrowser.svelte",
+   "kind": "component",
+   "layer": "visual",
+   "status": "changed",
+   "signature": "",
+   "lines": [
+    {
+     "op": " ",
+     "n": 522,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 523,
+     "text": "      <div class=\"search-widget\">"
+    },
+    {
+     "op": " ",
+     "n": 524,
+     "text": "        <svg class=\"search-icon\" width=\"11\" height=\"11\" viewBox=\"0 0 11 11\"><circle cx=\"4.5\" cy=\"4.5\" r=\"3\" stroke=\"currentColor\" fill=\"none\" stroke-width=\"1.2\"/><path d=\"M7 7l3 3\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></svg>"
+    },
+    {
+     "op": "-",
+     "n": 524,
+     "text": "        <input type=\"text\" bind:value={filterText} placeholder=\"Filter\" class=\"search-input\" />"
+    },
+    {
+     "op": "+",
+     "n": 525,
+     "text": "        <input type=\"text\" bind:value={filterText} placeholder=\"Filter\" class=\"search-input\" onkeydown={(e) => e.key === 'Enter' && filterText.includes('*') && browse(currentPath, false)} />"
+    },
+    {
+     "op": " ",
+     "n": 526,
+     "text": "      </div>"
+    },
+    {
+     "op": " ",
+     "n": 527,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 528,
+     "text": "      <div class=\"header-sep\"></div>"
+    }
+   ],
+   "in": [],
+   "out": [],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "Pressing Enter in the filter box triggers a browse when the text contains an asterisk.",
+   "shots": [
+    {
+     "name": "filter *.pdf",
+     "before": "shots/v7/before-filter_starpdf.png",
+     "after": "shots/v7/after-filter_starpdf.png"
+    },
+    {
+     "name": "filter *",
+     "before": "shots/v7/before-filter_star.png",
+     "after": "shots/v7/after-filter_star.png"
+    }
+   ]
+  },
+  {
+   "id": "backend/main_test.go:TestBrowseGlobMatch",
+   "name": "TestBrowseGlobMatch",
+   "file": "backend/main_test.go",
+   "kind": "test",
+   "layer": "test",
+   "status": "added",
+   "signature": "func TestBrowseGlobMatch(t *testing.T)",
+   "lines": [
+    {
+     "op": "+",
+     "n": 687,
+     "text": "func TestBrowseGlobMatch(t *testing.T) {"
+    },
+    {
+     "op": "+",
+     "n": 688,
+     "text": "\troot := setupTestDir(t)"
+    },
+    {
+     "op": "+",
+     "n": 689,
+     "text": "\tmux := newMux(testConfig(root))"
+    },
+    {
+     "op": "+",
+     "n": 690,
+     "text": ""
+    },
+    {
+     "op": "+",
+     "n": 691,
+     "text": "\trr := browseRequest(t, mux, \"/&match=*.txt\")"
+    },
+    {
+     "op": "+",
+     "n": 692,
+     "text": "\tresp := decodeBrowse(t, rr)"
+    },
+    {
+     "op": "+",
+     "n": 693,
+     "text": ""
+    },
+    {
+     "op": "+",
+     "n": 694,
+     "text": "\tif len(resp.Entries) == 0 {"
+    },
+    {
+     "op": "+",
+     "n": 695,
+     "text": "\t\tt.Fatal(\"expected at least one .txt entry\")"
+    },
+    {
+     "op": "+",
+     "n": 696,
+     "text": "\t}"
+    },
+    {
+     "op": "+",
+     "n": 697,
+     "text": "\tfor _, e := range resp.Entries {"
+    },
+    {
+     "op": "+",
+     "n": 698,
+     "text": "\t\tif filepath.Ext(e.Name) != \".txt\" {"
+    },
+    {
+     "op": "+",
+     "n": 699,
+     "text": "\t\t\tt.Errorf(\"unexpected entry %q for match=*.txt\", e.Name)"
+    },
+    {
+     "op": "+",
+     "n": 700,
+     "text": "\t\t}"
+    },
+    {
+     "op": "+",
+     "n": 701,
+     "text": "\t}"
+    },
+    {
+     "op": "+",
+     "n": 702,
+     "text": "}"
+    }
+   ],
+   "in": [],
+   "out": [
+    {
+     "from": "backend/main_test.go:TestBrowseGlobMatch",
+     "to": "backend/main_test.go:setupTestDir",
+     "kind": "calls",
+     "line": 688,
+     "text": "root := setupTestDir(t)"
+    },
+    {
+     "from": "backend/main_test.go:TestBrowseGlobMatch",
+     "to": "backend/main.go:newMux",
+     "kind": "calls",
+     "line": 689,
+     "text": "mux := newMux(testConfig(root))"
+    },
+    {
+     "from": "backend/main_test.go:TestBrowseGlobMatch",
+     "to": "backend/main_test.go:testConfig",
+     "kind": "calls",
+     "line": 689,
+     "text": "mux := newMux(testConfig(root))"
+    },
+    {
+     "from": "backend/main_test.go:TestBrowseGlobMatch",
+     "to": "backend/main_test.go:browseRequest",
+     "kind": "calls",
+     "line": 691,
+     "text": "rr := browseRequest(t, mux, \"/&match=*.txt\")"
+    }
+   ],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "The GET /api/browse endpoint now filters entries by name using an optional match glob parameter."
+  }
+ ],
+ "lines_changed": 29,
+ "commit": {
+  "hash": "ed323c76174cab8adac597f8e19da554c2444ad0",
+  "author": "vault-agent",
+  "date": "15 Nov 03:39",
+  "subject": "REQ-V7: server-side glob filter for browse (?match=*.pdf)",
+  "body": ""
+ }
+}

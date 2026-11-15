@@ -1,0 +1,156 @@
+{
+ "case": {
+  "id": "REQ-V8",
+  "title": "File size in the preview header",
+  "repo": "samples/vault",
+  "base": "main",
+  "head": "agent/req-v8-preview-size",
+  "lang": "go",
+  "agent": "vault-agent",
+  "content": "../v7/content",
+  "scenes": [
+   {
+    "name": "preview notes.txt",
+    "unit": "frontend/src/Preview.svelte:markup",
+    "steps": [
+     {
+      "click": "notes.txt"
+     }
+    ],
+    "path": "/",
+    "focus": ".pv-header"
+   }
+  ],
+  "project": "vault"
+ },
+ "requirement": "# REQ-V8: file size in the preview header\n\nOwner of the request: Team Files (frontend). Repo: vault.\n\nThe preview panel's header shows the file's size next to its name, in B, KB, MB or GB.\n",
+ "graph": {
+  "nodes": 92,
+  "edges": 341
+ },
+ "units": [
+  {
+   "id": "frontend/src/Preview.svelte:formatSize",
+   "name": "formatSize",
+   "file": "frontend/src/Preview.svelte",
+   "kind": "func",
+   "layer": "logic",
+   "status": "added",
+   "signature": "",
+   "lines": [
+    {
+     "op": "+",
+     "n": 29,
+     "text": "  function formatSize(bytes) {"
+    },
+    {
+     "op": "+",
+     "n": 30,
+     "text": "    if (bytes < 1024) return `${bytes} B`;"
+    },
+    {
+     "op": "+",
+     "n": 31,
+     "text": "    const units = ['KB', 'MB', 'GB'];"
+    },
+    {
+     "op": "+",
+     "n": 32,
+     "text": "    let v = bytes / 1024, i = 0;"
+    },
+    {
+     "op": "+",
+     "n": 33,
+     "text": "    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }"
+    },
+    {
+     "op": "+",
+     "n": 34,
+     "text": "    return `${v.toFixed(1)} ${units[i]}`;"
+    },
+    {
+     "op": "+",
+     "n": 35,
+     "text": "  }"
+    }
+   ],
+   "in": [],
+   "out": [],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "The preview header now displays the file size in bytes, kilobytes, megabytes, or gigabytes."
+  },
+  {
+   "id": "frontend/src/Preview.svelte:markup",
+   "name": "Preview.svelte",
+   "file": "frontend/src/Preview.svelte",
+   "kind": "component",
+   "layer": "visual",
+   "status": "changed",
+   "signature": "",
+   "lines": [
+    {
+     "op": " ",
+     "n": 50,
+     "text": "        <path d=\"M5 5.5h6M5 8h6M5 10.5h4\" stroke=\"#5a9fd4\" stroke-width=\"0.9\" stroke-linecap=\"round\"/>"
+    },
+    {
+     "op": " ",
+     "n": 51,
+     "text": "      </svg>"
+    },
+    {
+     "op": " ",
+     "n": 52,
+     "text": "      <span class=\"pv-filename\" title={file.name}>{file.name}</span>"
+    },
+    {
+     "op": "+",
+     "n": 53,
+     "text": "      <span class=\"pv-size\">{formatSize(file.size)}</span>"
+    },
+    {
+     "op": " ",
+     "n": 54,
+     "text": "    </div>"
+    },
+    {
+     "op": " ",
+     "n": 55,
+     "text": "    <div class=\"pv-actions\">"
+    },
+    {
+     "op": " ",
+     "n": 56,
+     "text": "      <button class=\"bw icon-sq\" onclick={copyUrl} title=\"Copy direct URL\">"
+    }
+   ],
+   "in": [],
+   "out": [],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "The preview header now displays the file size next to its name.",
+   "shots": [
+    {
+     "name": "preview notes.txt",
+     "before": "shots/v8/before-preview_notestxt.png",
+     "after": "shots/v8/after-preview_notestxt.png"
+    }
+   ]
+  }
+ ],
+ "lines_changed": 8,
+ "commit": {
+  "hash": "05a519b9082c9420013f84cadace3f33e14f171f",
+  "author": "vault-agent",
+  "date": "15 Nov 04:17",
+  "subject": "REQ-V8: show file size in the preview header",
+  "body": ""
+ }
+}

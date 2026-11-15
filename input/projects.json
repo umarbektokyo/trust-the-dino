@@ -1,0 +1,6 @@
+[
+  {"id": "vault", "name": "vault", "repo": "samples/vault", "default": "main", "langs": ["go", "svelte"],
+   "about": "File server with secret codes per file"},
+  {"id": "wadden", "name": "Waddenislands", "repo": "samples/wadden", "default": "main", "langs": ["java"],
+   "about": "Ferry ticket terminal"}
+]

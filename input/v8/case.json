@@ -1,0 +1,24 @@
+{
+  "id": "REQ-V8",
+  "title": "File size in the preview header",
+  "repo": "samples/vault",
+  "base": "main",
+  "head": "agent/req-v8-preview-size",
+  "lang": "go",
+  "agent": "vault-agent",
+  "content": "../v7/content",
+  "scenes": [
+    {
+      "name": "preview notes.txt",
+      "unit": "frontend/src/Preview.svelte:markup",
+      "steps": [
+        {
+          "click": "notes.txt"
+        }
+      ],
+      "path": "/",
+      "focus": ".pv-header"
+    }
+  ],
+  "project": "vault"
+}

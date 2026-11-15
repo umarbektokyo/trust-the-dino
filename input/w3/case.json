@@ -1,0 +1,11 @@
+{
+  "id": "REQ-W3",
+  "title": "Route turnover (Option 3) runs in a thread",
+  "repo": "samples/wadden",
+  "base": "main",
+  "head": "agent/req-w3",
+  "lang": "java",
+  "agent": "wadden-agent",
+  "approver": "Sanne de Vries",
+  "project": "wadden"
+}

@@ -1,0 +1,687 @@
+{
+ "case": {
+  "id": "REQ-W3",
+  "title": "Route turnover (Option 3) runs in a thread",
+  "repo": "samples/wadden",
+  "base": "main",
+  "head": "agent/req-w3",
+  "lang": "java",
+  "agent": "wadden-agent",
+  "approver": "Sanne de Vries",
+  "project": "wadden"
+ },
+ "requirement": "# REQ-W3: Option 3 runs in a thread\n\nOwner of the request: Team Terminal. Repo: Waddenislands (Java terminal app for a ferry company).\n\nOption 3 of the menu asks for a departure and an arrival city and prints the total value of all\ntickets on that route (routes are one-way), e.g.\n`All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.`\n\nThe ticket database will grow during the tourist season, and tickets must stay available while\nOption 3 runs. Run the Option 3 calculation in a separate thread.\n\nNon-functional: the printed message and the other menu options are unchanged; option 5 still stops\nthe program.\n",
+ "graph": {
+  "nodes": 108,
+  "edges": 200
+ },
+ "units": [
+  {
+   "id": "src/Main.java:Main.main",
+   "name": "Main.main",
+   "file": "src/Main.java",
+   "kind": "method",
+   "layer": "data",
+   "status": "changed",
+   "signature": "void main() throws FileNotFoundException",
+   "lines": [
+    {
+     "op": " ",
+     "n": 8,
+     "text": "    void main() throws FileNotFoundException {"
+    },
+    {
+     "op": " ",
+     "n": 9,
+     "text": "        Scanner input = new Scanner(System.in);"
+    },
+    {
+     "op": " ",
+     "n": 10,
+     "text": "        System.out.print(\"Data file: \"); String fileName = input.nextLine();"
+    },
+    {
+     "op": " ",
+     "n": 11,
+     "text": "        if (fileName.isEmpty()) { fileName = \"resources/waddenislands.txt\"; }"
+    },
+    {
+     "op": " ",
+     "n": 12,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 13,
+     "text": "        Terminal terminal = ParseMaster.readFile(fileName);"
+    },
+    {
+     "op": " ",
+     "n": 14,
+     "text": ""
+    },
+    {
+     "op": " ",
+     "n": 15,
+     "text": "        while (true) {"
+    },
+    {
+     "op": " ",
+     "n": 16,
+     "text": "            System.out.print(printMenu());"
+    },
+    {
+     "op": " ",
+     "n": 17,
+     "text": "            switch (input.nextLine()) {"
+    },
+    {
+     "op": " ",
+     "n": 18,
+     "text": "                case \"1\" -> {"
+    },
+    {
+     "op": " ",
+     "n": 19,
+     "text": "                    System.out.println(terminal);"
+    },
+    {
+     "op": " ",
+     "n": 20,
+     "text": "                }"
+    },
+    {
+     "op": " ",
+     "n": 21,
+     "text": "                case \"2\" -> {"
+    },
+    {
+     "op": " ",
+     "n": 22,
+     "text": "                    System.out.print(\"What date would you want to sort by? (ex: 23-10-2024)\\n\" +"
+    },
+    {
+     "op": " ",
+     "n": 23,
+     "text": "                            \"Date: \");"
+    },
+    {
+     "op": " ",
+     "n": 24,
+     "text": "                    System.out.println(terminal.toStringDate(input.nextLine()));"
+    },
+    {
+     "op": " ",
+     "n": 25,
+     "text": "                }"
+    },
+    {
+     "op": " ",
+     "n": 26,
+     "text": "                case \"3\" -> {"
+    },
+    {
+     "op": " ",
+     "n": 27,
+     "text": "                    System.out.print(\"Route Turn-Over Calculation:\\nDeparture City: \");"
+    },
+    {
+     "op": " ",
+     "n": 28,
+     "text": "                    String departureCity = input.nextLine();"
+    },
+    {
+     "op": " ",
+     "n": 29,
+     "text": "                    System.out.print(\"Arrival City: \");"
+    },
+    {
+     "op": " ",
+     "n": 30,
+     "text": "                    String arrivalCity = input.nextLine();"
+    },
+    {
+     "op": "-",
+     "n": 31,
+     "text": "                    System.out.println(terminal.toStringTurnOver(departureCity, arrivalCity));"
+    },
+    {
+     "op": "+",
+     "n": 31,
+     "text": "                    terminal.startTurnOver(departureCity, arrivalCity, System.out::println);"
+    },
+    {
+     "op": " ",
+     "n": 32,
+     "text": "                }"
+    },
+    {
+     "op": " ",
+     "n": 33,
+     "text": "                case \"4\" -> {"
+    },
+    {
+     "op": " ",
+     "n": 34,
+     "text": "                    System.out.print(\"Listing All Passengers in a Route:\\nDeparture City: \");"
+    },
+    {
+     "op": " ",
+     "n": 35,
+     "text": "                    String departureCity = input.nextLine();"
+    },
+    {
+     "op": " ",
+     "n": 36,
+     "text": "                    System.out.print(\"Arrival City: \");"
+    },
+    {
+     "op": " ",
+     "n": 37,
+     "text": "                    String arrivalCity = input.nextLine();"
+    },
+    {
+     "op": " ",
+     "n": 38,
+     "text": "                    System.out.println("
+    },
+    {
+     "op": " ",
+     "n": 39,
+     "text": "                            terminal.toStringRoutePassengerList(departureCity, arrivalCity));"
+    },
+    {
+     "op": " ",
+     "n": 40,
+     "text": "                }"
+    },
+    {
+     "op": " ",
+     "n": 41,
+     "text": "                case \"5\" -> {"
+    },
+    {
+     "op": " ",
+     "n": 42,
+     "text": "                    System.out.print(\"Thank you for using our services :)\\n\" +"
+    },
+    {
+     "op": " ",
+     "n": 43,
+     "text": "                            \" - Wadden Islands Ferry Company\\n\");"
+    },
+    {
+     "op": " ",
+     "n": 44,
+     "text": "                    System.exit(0);"
+    },
+    {
+     "op": " ",
+     "n": 45,
+     "text": "                }"
+    },
+    {
+     "op": " ",
+     "n": 46,
+     "text": "            }"
+    },
+    {
+     "op": " ",
+     "n": 47,
+     "text": "        }"
+    },
+    {
+     "op": " ",
+     "n": 48,
+     "text": "    }"
+    }
+   ],
+   "in": [],
+   "out": [
+    {
+     "from": "src/Main.java:Main.main",
+     "to": "src/ParseMaster.java:ParseMaster.readFile",
+     "kind": "calls",
+     "line": 13,
+     "text": "Terminal terminal = ParseMaster.readFile(fileName);"
+    },
+    {
+     "from": "src/Main.java:Main.main",
+     "to": "src/Main.java:Main.printMenu",
+     "kind": "calls",
+     "line": 16,
+     "text": "System.out.print(printMenu());"
+    },
+    {
+     "from": "src/Main.java:Main.main",
+     "to": "src/Terminal.java:Terminal.toStringDate",
+     "kind": "calls",
+     "line": 24,
+     "text": "System.out.println(terminal.toStringDate(input.nextLine()));"
+    },
+    {
+     "from": "src/Main.java:Main.main",
+     "to": "src/Terminal.java:Terminal.startTurnOver",
+     "kind": "calls",
+     "line": 31,
+     "text": "terminal.startTurnOver(departureCity, arrivalCity, System.out::println);"
+    },
+    {
+     "from": "src/Main.java:Main.main",
+     "to": "src/Terminal.java:Terminal.toStringRoutePassengerList",
+     "kind": "calls",
+     "line": 39,
+     "text": "terminal.toStringRoutePassengerList(departureCity, arrivalCity));"
+    }
+   ],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "tests": {
+    "node": "src/Main.java:Main.main",
+    "code": "import org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.BeforeEach;\nimport java.io.ByteArrayInputStream;\nimport java.io.ByteArrayOutputStream;\nimport java.io.PrintStream;\nimport java.io.FileNotFoundException;\nimport java.util.Scanner;\nimport java.util.ArrayList;\n\nclass TrustGenTest {\n\n    private Terminal term;\n    private Terminal term2;\n    private TicketPassenger t1P;\n    private TicketPassenger t1P2;\n    private TicketPassenger t4P;\n    private TicketBike t2B;\n    private TicketBike t2B2;\n    private TicketCar t3C;\n    private TicketCar t3C2;\n    private Terminal terminal;\n\n    @BeforeEach\n    void init() {\n        String rawFile = \"\"\"\n            ^CAR TICKET\n            DEPARTURE: Texel, 23-10-2024, 13:15\n            ARRIVAL: Vlieland, 23-10-2024, 13:45\n            PRICE: 70 euros\n            LENGTH: <5meters\n            PASSENGER: Swiatek, Iga\n            PASSENGER: Zheng, Qinwen\n            ^PASSENGER TICKET\n            DEPARTURE: Texel, 23-10-2024, 15:15\n            ARRIVAL: Terschelling, 23-10-2024, 15:45\n            PRICE: 10 euros\n            NAME: Verstappen, Max\n            ^PASSENGER TICKET\n            DEPARTURE: Texel, 24-10-2024, 15:15\n            ARRIVAL: Terschelling, 24-10-2024, 15:45\n            PRICE: 10 euros\n            NAME: Pulling, Abbi\n            ^CAR TICKET\n            DEPARTURE: Terschelling, 25-10-2024, 13:00\n            ARRIVAL: Vlieland, 25-10-2024, 14:00\n            PRICE: 130 euros\n            LENGTH: >=5meters\n            PASSENGER: Sinner, Jannik\n            PASSENGER: Alcaraz, Carlos\n            PASSENGER: Djokovic, Novak\n            ^BIKE TICKET\n            DEPARTURE: Terschelling, 25-10-2024, 13:00\n            ARRIVAL: Vlieland, 25-10-2024, 14:00\n            PRICE: 25 euros\n            PASSENGER: Vos, Marianne\n            \"\"\";\n        String outputFile = \"All Tickets:\\n\" +\n                \"A CAR TICKET for passenger Iga Swiatek (driver) for the route Texel -> Vlieland on 23-10-2024.\\n\" +\n                \"Departure is scheduled for 13:15. Arrival is scheduled for 23-10-2024.\\n\" +\n                \"Additional passengers are: [Qinwen Zheng].\\n\" +\n                \"A PASSENGER TICKET for passenger Max Verstappen for the route Texel -> Terschelling on 23-10-2024.\\n\" +\n                \"Departure is scheduled for 15:15. Arrival is scheduled for 23-10-2024.\\n\" +\n                \"A PASSENGER TICKET for passenger Abbi Pulling for the route Texel -> Terschelling on 24-10-2024.\\n\" +\n                \"Departure is scheduled for 15:15. Arrival is scheduled for 24-10-2024.\\n\" +\n                \"A CAR TICKET for passenger Jannik Sinner (driver) for the route Terschelling -> Vlieland on 25-10-2024.\\n\" +\n                \"Departure is scheduled for 13:00. Arrival is scheduled for 25-10-2024.\\n\" +\n                \"Additional passengers are: [Carlos Alcaraz, Novak Djokovic].\\n\" +\n                \"A BIKE TICKET for passenger Marianne Vos for the route Terschelling -> Vlieland on 25-10-2024.\\n\" +\n                \"Departure is scheduled for 13:00. Arrival is scheduled for 25-10-2024.\\n\";\n        term = ParseMaster.parseFile(new Scanner(rawFile));\n        term2 = ParseMaster.parseFile(new Scanner(rawFile));\n    }\n\n    @BeforeEach\n    void setup() {\n        t1P = new TicketPassenger(new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"),\n                new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"), 50, new HumanName(\"Ross\", \"Bob\"));\n        t1P2 = new TicketPassenger(new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"),\n                new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"), 50, new HumanName(\"Ross\", \"Bob\"));\n        t4P = new TicketPassenger(new InfoTravel(\"Athens\", \"10-10-2024\", \"10:15\"),\n                new InfoTravel(\"Athens\", \"10-10-2024\", \"10:15\"), 50, new HumanName(\"Ross\", \"Bob\"));\n        t2B = new TicketBike(new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"),\n                new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"), 50, new HumanName(\"Ross\", \"Bob\"));\n        t2B2 = new TicketBike(new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"),\n                new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"), 50, new HumanName(\"Ross\", \"Bob\"));\n        ArrayList<HumanName> passengers = new ArrayList<>();\n        passengers.add(new HumanName(\"Verstapen\", \"Max\"));\n        passengers.add(new HumanName(\"Product\", \"Dot\"));\n        t3C = new TicketCar(new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"),\n                new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"), 50, \">=4\",\n                new HumanName(\"Bakhodirjonov\", \"Umabrek\"), passengers);\n        t3C2 = new TicketCar(new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"),\n                new InfoTravel(\"Athens\", \"23-10-2024\", \"10:15\"), 50, \">=4\",\n                new HumanName(\"Bakhodirjonov\", \"Umabrek\"), passengers);\n\n        ArrayList<Ticket> ticketList = new ArrayList<>();\n        ticketList.add(t1P);\n        ticketList.add(t2B);\n        ticketList.add(t3C);\n        ticketList.add(t4P);\n        terminal = new Terminal(ticketList);\n    }\n\n    @Test\n    void trust_Option3RunsInSeparateThread() throws FileNotFoundException {\n        String scriptedInput = \"resources/waddenislands.txt\\n3\\nTerschelling\\nVlieland\\n\";\n        System.setIn(new ByteArrayInputStream(scriptedInput.getBytes()));\n        ByteArrayOutputStream outContent = new ByteArrayOutputStream();\n        PrintStream originalOut = System.out;\n        System.setOut(new PrintStream(outContent));\n\n        try {\n            new Main().main();\n        } catch (java.util.NoSuchElementException expected) {\n            // input exhausted as intended; Scanner throws when script runs out\n        } finally {\n            System.setIn(System.in);\n            System.setOut(originalOut);\n        }\n\n        String output = outContent.toString();\n        org.junit.jupiter.api.Assertions.assertTrue(\n                output.contains(\"All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.\"),\n                \"Expected turnover message for route Terschelling -> Vlieland\");\n    }\n\n    @Test\n    void trust_Option3TurnoverValueMatchesExpected() throws FileNotFoundException {\n        String scriptedInput = \"resources/waddenislands.txt\\n3\\nTerschelling\\nVlieland\\n\";\n        System.setIn(new ByteArrayInputStream(scriptedInput.getBytes()));\n        ByteArrayOutputStream outContent = new ByteArrayOutputStream();\n        PrintStream originalOut = System.out;\n        System.setOut(new PrintStream(outContent));\n\n        try {\n            new Main().main();\n        } catch (java.util.NoSuchElementException expected) {\n            // input exhausted as intended; Scanner throws when script runs out\n        } finally {\n            System.setIn(System.in);\n            System.setOut(originalOut);\n        }\n\n        String output = outContent.toString();\n        org.junit.jupiter.api.Assertions.assertTrue(\n                output.contains(\"155 euros\"),\n                \"Expected combined ticket value of 155 euros for route Terschelling -> Vlieland\");\n    }\n}",
+    "guard_code": "",
+    "rounds": [
+     {
+      "round": 1,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 11.5,
+       "tokens": 5067,
+       "cached": true
+      },
+      "compiled": false,
+      "coverage": null,
+      "tests": 0
+     },
+     {
+      "round": 2,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 12.4,
+       "tokens": 7416,
+       "cached": true
+      },
+      "compiled": false,
+      "coverage": null,
+      "tests": 0
+     },
+     {
+      "round": 3,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 12.3,
+       "tokens": 9649,
+       "cached": true
+      },
+      "compiled": true,
+      "coverage": 48.1,
+      "tests": 2
+     }
+    ],
+    "coverage": 48.1,
+    "uncovered": [
+     19,
+     20,
+     22,
+     24,
+     25,
+     34,
+     35,
+     36,
+     37,
+     38,
+     39,
+     40,
+     42,
+     44
+    ],
+    "base_compiled": true,
+    "tests": [
+     {
+      "name": "trust_Option3RunsInSeparateThread",
+      "from": "requirement",
+      "head": false,
+      "base": true,
+      "meaning": "regression",
+      "message": [
+       "Expected turnover message for route Terschelling -> Vlieland ==> expected: <true> but was: <false>"
+      ],
+      "lines": [
+       9,
+       10,
+       11,
+       13,
+       16,
+       17,
+       27,
+       28,
+       29,
+       30,
+       31,
+       32,
+       46
+      ],
+      "source": "@Test\n    void trust_Option3RunsInSeparateThread() throws FileNotFoundException {\n        String scriptedInput = \"resources/waddenislands.txt\\n3\\nTerschelling\\nVlieland\\n\";\n        System.setIn(new ByteArrayInputStream(scriptedInput.getBytes()));\n        ByteArrayOutputStream outContent = new ByteArrayOutputStream();\n        PrintStream originalOut = System.out;\n        System.setOut(new PrintStream(outContent));\n\n        try {\n            new Main().main();\n        } catch (java.util.NoSuchElementException expected) {\n            // input exhausted as intended; Scanner throws when script runs out\n        } finally {\n            System.setIn(System.in);\n            System.setOut(originalOut);\n        }\n\n        String output = outContent.toString();\n        org.junit.jupiter.api.Assertions.assertTrue(\n                output.contains(\"All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.\"),\n                \"Expected turnover message for route Terschelling -> Vlieland\");\n    }",
+      "origin": "new"
+     },
+     {
+      "name": "trust_Option3TurnoverValueMatchesExpected",
+      "from": "requirement",
+      "head": false,
+      "base": true,
+      "meaning": "regression",
+      "message": [
+       "Expected combined ticket value of 155 euros for route Terschelling -> Vlieland ==> expected: <true> but was: <false>"
+      ],
+      "lines": [
+       9,
+       10,
+       11,
+       13,
+       16,
+       17,
+       27,
+       28,
+       29,
+       30,
+       31,
+       32,
+       46
+      ],
+      "source": "@Test\n    void trust_Option3TurnoverValueMatchesExpected() throws FileNotFoundException {\n        String scriptedInput = \"resources/waddenislands.txt\\n3\\nTerschelling\\nVlieland\\n\";\n        System.setIn(new ByteArrayInputStream(scriptedInput.getBytes()));\n        ByteArrayOutputStream outContent = new ByteArrayOutputStream();\n        PrintStream originalOut = System.out;\n        System.setOut(new PrintStream(outContent));\n\n        try {\n            new Main().main();\n        } catch (java.util.NoSuchElementException expected) {\n            // input exhausted as intended; Scanner throws when script runs out\n        } finally {\n            System.setIn(System.in);\n            System.setOut(originalOut);\n        }\n\n        String output = outContent.toString();\n        org.junit.jupiter.api.Assertions.assertTrue(\n                output.contains(\"155 euros\"),\n                \"Expected combined ticket value of 155 euros for route Terschelling -> Vlieland\");\n    }",
+      "origin": "new"
+     }
+    ],
+    "duplicates": [],
+    "dropped": []
+   },
+   "explain": "Option 3 calculates route ticket value in a separate thread while keeping tickets available."
+  },
+  {
+   "id": "src/Terminal.java:Terminal.startTurnOver",
+   "name": "Terminal.startTurnOver",
+   "file": "src/Terminal.java",
+   "kind": "method",
+   "layer": "logic",
+   "status": "added",
+   "signature": "public Thread startTurnOver(String departureCity, String arrivalCity, Consumer<String> onDone)",
+   "lines": [
+    {
+     "op": "+",
+     "n": 75,
+     "text": "    public Thread startTurnOver(String departureCity, String arrivalCity,"
+    },
+    {
+     "op": "+",
+     "n": 76,
+     "text": "                                Consumer<String> onDone) {"
+    },
+    {
+     "op": "+",
+     "n": 77,
+     "text": "        Thread thread = new Thread(() ->"
+    },
+    {
+     "op": "+",
+     "n": 78,
+     "text": "                onDone.accept(toStringTurnOver(departureCity, arrivalCity)));"
+    },
+    {
+     "op": "+",
+     "n": 79,
+     "text": "        thread.start();"
+    },
+    {
+     "op": "+",
+     "n": 80,
+     "text": "        return thread;"
+    },
+    {
+     "op": "+",
+     "n": 81,
+     "text": "    }"
+    }
+   ],
+   "in": [
+    {
+     "from": "src/Main.java:Main.main",
+     "to": "src/Terminal.java:Terminal.startTurnOver",
+     "kind": "calls",
+     "line": 31,
+     "text": "terminal.startTurnOver(departureCity, arrivalCity, System.out::println);"
+    },
+    {
+     "from": "tests/TerminalTest.java:TerminalTest.startTurnOverTest",
+     "to": "src/Terminal.java:Terminal.startTurnOver",
+     "kind": "calls",
+     "line": 104,
+     "text": "Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", s -> {"
+    }
+   ],
+   "out": [
+    {
+     "from": "src/Terminal.java:Terminal.startTurnOver",
+     "to": "src/Terminal.java:Terminal.toStringTurnOver",
+     "kind": "calls",
+     "line": 78,
+     "text": "onDone.accept(toStringTurnOver(departureCity, arrivalCity)));"
+    }
+   ],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "tests": {
+    "node": "src/Terminal.java:Terminal.startTurnOver",
+    "code": "import org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.BeforeEach;\nimport static org.junit.jupiter.api.Assertions.*;\n\nclass TrustGenTest {\n\n    Terminal term;\n    Terminal term2;\n\n    @BeforeEach\n    void init() {\n        String rawFile = \"\"\"\n            ^CAR TICKET\n            DEPARTURE: Texel, 23-10-2024, 13:15\n            ARRIVAL: Vlieland, 23-10-2024, 13:45\n            PRICE: 70 euros\n            LENGTH: <5meters\n            PASSENGER: Swiatek, Iga\n            PASSENGER: Zheng, Qinwen\n            ^PASSENGER TICKET\n            DEPARTURE: Texel, 23-10-2024, 15:15\n            ARRIVAL: Terschelling, 23-10-2024, 15:45\n            PRICE: 10 euros\n            NAME: Verstappen, Max\n            ^PASSENGER TICKET\n            DEPARTURE: Texel, 24-10-2024, 15:15\n            ARRIVAL: Terschelling, 24-10-2024, 15:45\n            PRICE: 10 euros\n            NAME: Pulling, Abbi\n            ^CAR TICKET\n            DEPARTURE: Terschelling, 25-10-2024, 13:00\n            ARRIVAL: Vlieland, 25-10-2024, 14:00\n            PRICE: 130 euros\n            LENGTH: >=5meters\n            PASSENGER: Sinner, Jannik\n            PASSENGER: Alcaraz, Carlos\n            PASSENGER: Djokovic, Novak\n            ^BIKE TICKET\n            DEPARTURE: Terschelling, 25-10-2024, 13:00\n            ARRIVAL: Vlieland, 25-10-2024, 14:00\n            PRICE: 25 euros\n            PASSENGER: Vos, Marianne\n            \"\"\";\n        term = ParseMaster.parseFile(new java.util.Scanner(rawFile));\n        term2 = ParseMaster.parseFile(new java.util.Scanner(rawFile));\n    }\n\n    @Test\n    void trust_startTurnOverRunsInSeparateThread() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<Thread> worker = new java.util.concurrent.atomic.AtomicReference<>();\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", s -> {\n            worker.set(Thread.currentThread());\n            result.set(s);\n        });\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.\", result.get());\n        assertSame(thread, worker.get());\n        assertNotSame(Thread.currentThread(), worker.get());\n    }\n\n    @Test\n    void trust_startTurnOverReturnsStartedThread() {\n        Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", s -> {});\n        assertTrue(thread.isAlive());\n        try {\n            thread.join();\n        } catch (InterruptedException e) {\n            fail(\"Thread was interrupted while joining\");\n        }\n    }\n\n    @Test\n    void trust_startTurnOverPrintsCorrectTurnoverMessage() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", result::set);\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.\", result.get());\n    }\n\n    @Test\n    void trust_startTurnOverHandlesRouteWithNoTickets() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Ameland\", \"Schiermonnikoog\", result::set);\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Ameland -> Schiermonnikoog combined are worth 0 euros.\", result.get());\n    }\n\n    @Test\n    void trust_startTurnOverHandlesReverseRoute() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Vlieland\", \"Terschelling\", result::set);\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Vlieland -> Terschelling combined are worth 0 euros.\", result.get());\n    }\n}",
+    "guard_code": "",
+    "rounds": [
+     {
+      "round": 1,
+      "meta": {
+       "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+       "seconds": 6.4,
+       "tokens": 3589,
+       "cached": true
+      },
+      "compiled": true,
+      "coverage": 100.0,
+      "tests": 5
+     }
+    ],
+    "coverage": 100.0,
+    "uncovered": [],
+    "base_compiled": false,
+    "tests": [
+     {
+      "name": "trust_startTurnOverHandlesReverseRoute",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       77,
+       78,
+       79,
+       80
+      ],
+      "source": "@Test\n    void trust_startTurnOverHandlesReverseRoute() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Vlieland\", \"Terschelling\", result::set);\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Vlieland -> Terschelling combined are worth 0 euros.\", result.get());\n    }",
+      "origin": "new"
+     },
+     {
+      "name": "trust_startTurnOverHandlesRouteWithNoTickets",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       77,
+       78,
+       79,
+       80
+      ],
+      "source": "@Test\n    void trust_startTurnOverHandlesRouteWithNoTickets() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Ameland\", \"Schiermonnikoog\", result::set);\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Ameland -> Schiermonnikoog combined are worth 0 euros.\", result.get());\n    }",
+      "origin": "new"
+     },
+     {
+      "name": "trust_startTurnOverPrintsCorrectTurnoverMessage",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       77,
+       78,
+       79,
+       80
+      ],
+      "source": "@Test\n    void trust_startTurnOverPrintsCorrectTurnoverMessage() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", result::set);\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.\", result.get());\n    }",
+      "origin": "new"
+     },
+     {
+      "name": "trust_startTurnOverReturnsStartedThread",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       77,
+       78,
+       79,
+       80
+      ],
+      "source": "@Test\n    void trust_startTurnOverReturnsStartedThread() {\n        Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", s -> {});\n        assertTrue(thread.isAlive());\n        try {\n            thread.join();\n        } catch (InterruptedException e) {\n            fail(\"Thread was interrupted while joining\");\n        }\n    }",
+      "origin": "new"
+     },
+     {
+      "name": "trust_startTurnOverRunsInSeparateThread",
+      "from": "requirement",
+      "head": true,
+      "base": false,
+      "meaning": "proves requirement",
+      "message": [],
+      "lines": [
+       77,
+       78,
+       79,
+       80
+      ],
+      "source": "@Test\n    void trust_startTurnOverRunsInSeparateThread() throws InterruptedException {\n        java.util.concurrent.atomic.AtomicReference<Thread> worker = new java.util.concurrent.atomic.AtomicReference<>();\n        java.util.concurrent.atomic.AtomicReference<String> result = new java.util.concurrent.atomic.AtomicReference<>();\n        Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", s -> {\n            worker.set(Thread.currentThread());\n            result.set(s);\n        });\n        thread.join();\n        assertEquals(\"All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.\", result.get());\n        assertSame(thread, worker.get());\n        assertNotSame(Thread.currentThread(), worker.get());\n    }",
+      "origin": "new"
+     }
+    ],
+    "duplicates": [],
+    "dropped": []
+   },
+   "explain": "Option 3 calculates route ticket totals in a background thread while keeping the database available."
+  },
+  {
+   "id": "tests/TerminalTest.java:TerminalTest.startTurnOverTest",
+   "name": "TerminalTest.startTurnOverTest",
+   "file": "tests/TerminalTest.java",
+   "kind": "test",
+   "layer": "test",
+   "status": "added",
+   "signature": "@Test void startTurnOverTest() throws InterruptedException",
+   "lines": [
+    {
+     "op": "+",
+     "n": 100,
+     "text": "    @Test"
+    },
+    {
+     "op": "+",
+     "n": 101,
+     "text": "    void startTurnOverTest() throws InterruptedException {"
+    },
+    {
+     "op": "+",
+     "n": 102,
+     "text": "        AtomicReference<String> result = new AtomicReference<>();"
+    },
+    {
+     "op": "+",
+     "n": 103,
+     "text": "        AtomicReference<Thread> worker = new AtomicReference<>();"
+    },
+    {
+     "op": "+",
+     "n": 104,
+     "text": "        Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", s -> {"
+    },
+    {
+     "op": "+",
+     "n": 105,
+     "text": "            worker.set(Thread.currentThread());"
+    },
+    {
+     "op": "+",
+     "n": 106,
+     "text": "            result.set(s);"
+    },
+    {
+     "op": "+",
+     "n": 107,
+     "text": "        });"
+    },
+    {
+     "op": "+",
+     "n": 108,
+     "text": "        thread.join();"
+    },
+    {
+     "op": "+",
+     "n": 109,
+     "text": "        assertEquals(\"All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.\", result.get());"
+    },
+    {
+     "op": "+",
+     "n": 110,
+     "text": "        assertSame(thread, worker.get());"
+    },
+    {
+     "op": "+",
+     "n": 111,
+     "text": "        assertNotSame(Thread.currentThread(), worker.get());"
+    },
+    {
+     "op": "+",
+     "n": 112,
+     "text": "    }"
+    }
+   ],
+   "in": [],
+   "out": [
+    {
+     "from": "tests/TerminalTest.java:TerminalTest.startTurnOverTest",
+     "to": "src/Terminal.java:Terminal.startTurnOver",
+     "kind": "calls",
+     "line": 104,
+     "text": "Thread thread = term.startTurnOver(\"Terschelling\", \"Vlieland\", s -> {"
+    }
+   ],
+   "consumers": [],
+   "route": null,
+   "guards": [],
+   "secret": [],
+   "routed": false,
+   "explain": "Option 3 calculates route ticket totals in a separate thread while keeping the database available."
+  }
+ ],
+ "lines_changed": 22,
+ "commit": {
+  "hash": "d60d3c8807f6466478c81fd39e59ad81d583a268",
+  "author": "wadden-agent",
+  "date": "15 Nov 09:30",
+  "subject": "REQ-W3: run Option 3 turnover in a thread",
+  "body": ""
+ }
+}

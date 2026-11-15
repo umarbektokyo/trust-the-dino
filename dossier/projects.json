@@ -1,0 +1,143 @@
+{
+ "projects": [
+  {
+   "id": "vault",
+   "name": "vault",
+   "repo": "samples/vault",
+   "default": "main",
+   "langs": [
+    "go",
+    "svelte"
+   ],
+   "about": "File server with secret codes per file",
+   "ready": true,
+   "branches": [
+    {
+     "name": "main",
+     "base": null,
+     "commits": [
+      {
+       "hash": "18ffa2d714113464e3a3722f09689e028045bb79",
+       "author": "Umarik",
+       "date": "29 Mar 16:22",
+       "subject": "update: file management for authenticated",
+       "case": null
+      },
+      {
+       "hash": "f39c6e5d3612caf467b0fb62331b6411a4af0856",
+       "author": "Umarik",
+       "date": "27 Mar 21:49",
+       "subject": "update: icons",
+       "case": null
+      },
+      {
+       "hash": "dc53c4e4aecfdf0746ec1b52bfd35a5d20ba60ff",
+       "author": "Umarik",
+       "date": "22 Mar 20:28",
+       "subject": "init: vault",
+       "case": null
+      }
+     ]
+    },
+    {
+     "name": "agent/req-v7-glob",
+     "base": "main",
+     "commits": [
+      {
+       "hash": "fcb3b92c56f8272037d4700c873521b277d11c29",
+       "author": "vault-agent",
+       "date": "15 Nov 04:38",
+       "subject": "REQ-V7: never list dotfiles, with or without a glob",
+       "case": "v7b",
+       "req": "REQ-V7",
+       "title": "Fix: never list dotfiles",
+       "units": 1,
+       "waiting": [],
+       "approver": "Mikko Laine"
+      },
+      {
+       "hash": "ed323c76174cab8adac597f8e19da554c2444ad0",
+       "author": "vault-agent",
+       "date": "15 Nov 03:39",
+       "subject": "REQ-V7: server-side glob filter for browse (?match=*.pdf)",
+       "case": "v7",
+       "req": "REQ-V7",
+       "title": "Server-side glob filter for browse",
+       "units": 4,
+       "waiting": [
+        {
+         "unit": "backend/main.go:handleBrowse",
+         "owner": "Aino Virtanen",
+         "team": "Team Security"
+        }
+       ],
+       "approver": "Mikko Laine"
+      }
+     ]
+    },
+    {
+     "name": "agent/req-v8-preview-size",
+     "base": "main",
+     "commits": [
+      {
+       "hash": "05a519b9082c9420013f84cadace3f33e14f171f",
+       "author": "vault-agent",
+       "date": "15 Nov 04:17",
+       "subject": "REQ-V8: show file size in the preview header",
+       "case": "v8",
+       "req": "REQ-V8",
+       "title": "File size in the preview header",
+       "units": 2,
+       "waiting": [],
+       "approver": null
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wadden",
+   "name": "Waddenislands",
+   "repo": "samples/wadden",
+   "default": "main",
+   "langs": [
+    "java"
+   ],
+   "about": "Ferry ticket terminal",
+   "ready": true,
+   "branches": [
+    {
+     "name": "main",
+     "base": null,
+     "commits": [
+      {
+       "hash": "8288959aa8a423ffb186c5ab0b174e54b727452d",
+       "author": "Wadden Team",
+       "date": "14 Nov 10:00",
+       "subject": "Waddenislands ferry ticket terminal",
+       "case": null
+      }
+     ]
+    },
+    {
+     "name": "agent/req-w3",
+     "base": "main",
+     "commits": [
+      {
+       "hash": "d60d3c8807f6466478c81fd39e59ad81d583a268",
+       "author": "wadden-agent",
+       "date": "15 Nov 09:30",
+       "subject": "REQ-W3: run Option 3 turnover in a thread",
+       "case": "w3",
+       "req": "REQ-W3",
+       "title": "Route turnover (Option 3) runs in a thread",
+       "units": 3,
+       "waiting": [],
+       "approver": "Sanne de Vries"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

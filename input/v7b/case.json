@@ -1,0 +1,50 @@
+{
+  "id": "REQ-V7",
+  "title": "Fix: never list dotfiles",
+  "repo": "samples/vault",
+  "base": "agent/req-v7-glob~1",
+  "head": "agent/req-v7-glob",
+  "lang": "go",
+  "agent": "vault-agent",
+  "approver": "Mikko Laine",
+  "content": "../v7/content",
+  "scenes": [
+    {
+      "name": "filter *.pdf",
+      "unit": "frontend/src/FileBrowser.svelte:markup",
+      "steps": [
+        {
+          "fill": ".search-input",
+          "text": "*.pdf"
+        },
+        {
+          "press": "Enter"
+        }
+      ],
+      "path": "/reports",
+      "viewport": [
+        760,
+        330
+      ]
+    },
+    {
+      "name": "filter *",
+      "unit": "frontend/src/FileBrowser.svelte:markup",
+      "steps": [
+        {
+          "fill": ".search-input",
+          "text": "*"
+        },
+        {
+          "press": "Enter"
+        }
+      ],
+      "path": "/",
+      "viewport": [
+        760,
+        330
+      ]
+    }
+  ],
+  "project": "vault"
+}

@@ -1,0 +1,82 @@
+diff --git a/src/Main.java b/src/Main.java
+index 5b48954..75ae1a0 100644
+--- a/src/Main.java
++++ b/src/Main.java
+@@ -28,7 +28,7 @@ public class Main {
+                     String departureCity = input.nextLine();
+                     System.out.print("Arrival City: ");
+                     String arrivalCity = input.nextLine();
+-                    System.out.println(terminal.toStringTurnOver(departureCity, arrivalCity));
++                    terminal.startTurnOver(departureCity, arrivalCity, System.out::println);
+                 }
+                 case "4" -> {
+                     System.out.print("Listing All Passengers in a Route:\nDeparture City: ");
+diff --git a/src/Terminal.java b/src/Terminal.java
+index d983f7f..920f310 100644
+--- a/src/Terminal.java
++++ b/src/Terminal.java
+@@ -1,5 +1,6 @@
+ import java.util.ArrayList;
+ import java.util.Objects;
++import java.util.function.Consumer;
+ import java.util.stream.Collectors;
+ 
+ public class Terminal {
+@@ -63,6 +64,22 @@ public class Terminal {
+                 departureCity, arrivalCity, calculateTurnOver(departureCity, arrivalCity));
+     }
+ 
++    /**
++     * Runs the turnover calculation (option 3) in its own thread, so the terminal stays
++     * available for other options (like selling tickets) while it runs.
++     * @param departureCity String
++     * @param arrivalCity String
++     * @param onDone receives the turnover message once the calculation has finished.
++     * @return the already started thread, join it to wait for the result.
++     */
++    public Thread startTurnOver(String departureCity, String arrivalCity,
++                                Consumer<String> onDone) {
++        Thread thread = new Thread(() ->
++                onDone.accept(toStringTurnOver(departureCity, arrivalCity)));
++        thread.start();
++        return thread;
++    }
++
+     /**
+      * Calculates the turnover for a specific route (omnidirectional).
+      * @param departureCity String
+diff --git a/tests/TerminalTest.java b/tests/TerminalTest.java
+index 9b6fbec..0fdd837 100644
+--- a/tests/TerminalTest.java
++++ b/tests/TerminalTest.java
+@@ -2,8 +2,11 @@ import org.junit.jupiter.api.BeforeEach;
+ import org.junit.jupiter.api.Test;
+ 
+ import java.util.Scanner;
++import java.util.concurrent.atomic.AtomicReference;
+ 
+ import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertNotSame;
++import static org.junit.jupiter.api.Assertions.assertSame;
+ 
+ public class TerminalTest {
+     Terminal term;
+@@ -94,4 +97,18 @@ public class TerminalTest {
+         assertEquals("All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.", term.toStringTurnOver("Terschelling", "Vlieland"));
+     }
+ 
++    @Test
++    void startTurnOverTest() throws InterruptedException {
++        AtomicReference<String> result = new AtomicReference<>();
++        AtomicReference<Thread> worker = new AtomicReference<>();
++        Thread thread = term.startTurnOver("Terschelling", "Vlieland", s -> {
++            worker.set(Thread.currentThread());
++            result.set(s);
++        });
++        thread.join();
++        assertEquals("All tickets in the database for the route Terschelling -> Vlieland combined are worth 155 euros.", result.get());
++        assertSame(thread, worker.get());
++        assertNotSame(Thread.currentThread(), worker.get());
++    }
++
+ }
