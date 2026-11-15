@@ -6,6 +6,7 @@ Pure functions (diff, guard_changes, secret_route) take graph dicts; only build(
 """
 
 import json
+import re
 import os
 import subprocess
 import sys
@@ -44,26 +45,35 @@ def diff(base, head):
 
 
 def guard_changes(base_node, head_node):
-    """Guards whose condition survived but now needs more to be reached, or that disappeared.
+    """Guards whose condition survived but now needs more (or less) to be reached, or that disappeared.
 
-    Matched by condition text: a guard that moved under an else keeps its cond, gains a path.
+    Matched by condition text, pairwise: a function can have several guards with the same text
+    (`err != nil`), so one of them disappearing must still show up.
     """
     head = {}
     for g in head_node.get("guards", []):
         head.setdefault(g["cond"], []).append(g)
-    out = []
+    leftover = []
     for g in base_node.get("guards", []):
+        same = head.get(g["cond"], [])
+        exact = next((x for x in same if x["path"] == g["path"]), None)
+        if exact:
+            same.remove(exact)
+        else:
+            leftover.append(g)
+    out = []
+    for g in leftover:
         now = head.get(g["cond"])
         if not now:
             out.append({"kind": "removed", "cond": g["cond"], "base": g, "head": None})
-        elif all(x["path"] != g["path"] for x in now):
-            h = now[0]
-            if g["path"].endswith(h["path"]):  # fewer conditions in front of it: runs in more cases
-                out.append({"kind": "widened", "cond": g["cond"], "base": g, "head": h,
-                            "removed": g["path"][: -len(h["path"])].rstrip(" &")})
-            else:
-                out.append({"kind": "narrowed", "cond": g["cond"], "base": g, "head": h,
-                            "added": h["path"][: -len(g["path"])].rstrip(" &")})
+            continue
+        h = now.pop(0)
+        if g["path"].endswith(h["path"]):  # fewer conditions in front of it: runs in more cases
+            out.append({"kind": "widened", "cond": g["cond"], "base": g, "head": h,
+                        "removed": g["path"][: -len(h["path"])].rstrip(" &")})
+        else:
+            out.append({"kind": "narrowed", "cond": g["cond"], "base": g, "head": h,
+                        "added": h["path"][: -len(g["path"])].rstrip(" &")})
     return out
 
 
@@ -90,16 +100,47 @@ def secret_route(g, node_id):
     return []
 
 
+SENSITIVE = re.compile(r"(?i)auth|login|session|secret|passw|token|cookie|unlock|hmac")
+
+
+def short_name(node_id):
+    return node_id.split(":", 1)[1]
+
+
+def reasons(base, head, i):
+    """Why a changed node is not the model's to decide, each with the lines that show it. In order:
+    a check that runs in fewer cases next to a secret; touching a secret directly; losing a call to an
+    auth function; changing a function whose job is security (by name)."""
+    b, h = nodes(base), nodes(head)
+    out = []
+    risky = [g for g in guard_changes(b[i], h[i]) if g["kind"] != "widened"]
+    route = secret_route(head, i) if risky else []
+    if risky and route:
+        out.append(("check", "A check now runs in fewer cases, next to a secret.", route))
+    secret = lambda g, n: "secret" in nodes(g).get(n, {}).get("labels", [])
+    touched = [e for g in (head, base) for e in edges_from(g, i, {"reads", "writes", "literal"}) if secret(g, e["to"])]
+    if touched:
+        out.append(("secret", "It reads or writes a secret directly.", touched[:3]))
+    calls_now = {e["to"] for e in edges_from(head, i, {"calls"})}
+    lost = [e for e in edges_from(base, i, {"calls"})
+            if SENSITIVE.search(short_name(e["to"])) and e["to"] not in calls_now]
+    if lost:
+        out.append(("auth-call", f"It no longer calls {short_name(lost[0]['to'])}.", lost[:3]))
+    if SENSITIVE.search(short_name(i)):
+        callers = edges_to(head, i, {"calls"})[:3]
+        out.append(("sensitive", f"{short_name(i)} is security code.", callers))
+    return out
+
+
 def review(base, head):
-    """What a human must look at: changed nodes with a guard change next to a secret are routed."""
+    """What a human must look at: changed nodes with at least one reason (see reasons()) are routed."""
     d, b, h = diff(base, head), nodes(base), nodes(head)
     items = []
     for i in d["changed"]:
-        gc = guard_changes(b[i], h[i])
-        risky = [g for g in gc if g["kind"] != "widened"]
-        route = secret_route(head, i) if risky else []
-        items.append({"id": i, "layer": h[i]["layer"], "guards": gc, "secret": route,
-                      "routed": bool(risky and route)})
+        why = reasons(base, head, i)
+        items.append({"id": i, "layer": h[i]["layer"], "guards": guard_changes(b[i], h[i]),
+                      "secret": why[0][2] if why else [], "why": [w[1] for w in why],
+                      "reasons": [w[0] for w in why], "routed": bool(why)})
     return {"diff": d, "items": items}
 
 

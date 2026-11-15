@@ -54,6 +54,11 @@ class Guards(unittest.TestCase):
         gc = guard_changes(fn("x", "1", [guard(DOT, '!(m != "") && ' + DOT)]), fn("x", "2", [guard(DOT)]))
         self.assertEqual([(g["kind"], g["removed"]) for g in gc], [("widened", '!(m != "")')])
 
+    def test_one_of_two_same_guards_removed(self):
+        two = [guard("err != nil", line=3), guard("err != nil", line=9)]
+        gc = guard_changes(fn("x", "1", two), fn("x", "2", two[:1]))
+        self.assertEqual([g["kind"] for g in gc], ["removed"])
+
     def test_removed(self):
         gc = guard_changes(fn("x", "1", [guard(DOT)]), fn("x", "2"))
         self.assertEqual([g["kind"] for g in gc], ["removed"])
@@ -79,6 +84,27 @@ class Secret(unittest.TestCase):
     def test_no_secret(self):
         _, head = graphs(caller_names_secret=False)
         self.assertEqual(secret_route(head, "a:list"), [])
+
+
+class Reasons(unittest.TestCase):
+    def test_reading_a_secret_routes(self):
+        base, head = graphs()
+        head["edges"] = head["edges"] + [edge("a:list", "resource:.s.json", "reads", 4)]
+        item = review(base, head)["items"][0]
+        self.assertEqual((item["routed"], item["reasons"]), (True, ["secret"]))
+
+    def test_losing_an_auth_call_routes(self):
+        base, head = graphs()
+        base["nodes"].append(fn("a:requireAuth", "r"))
+        head["nodes"].append(fn("a:requireAuth", "r"))
+        base["edges"] = base["edges"] + [edge("a:list", "a:requireAuth", "calls", 5)]
+        item = review(base, head)["items"][0]
+        self.assertIn("auth-call", item["reasons"])
+
+    def test_security_named_function_routes(self):
+        base = {"nodes": [fn("a:isAuthenticated", "1")], "edges": []}
+        head = {"nodes": [fn("a:isAuthenticated", "2")], "edges": []}
+        self.assertEqual(review(base, head)["items"][0]["reasons"], ["sensitive"])
 
 
 class Review(unittest.TestCase):
